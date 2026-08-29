@@ -94,17 +94,34 @@ export default function DormantGemsSection({ dormantGems, activatedGems }: Props
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 1 }}>
           <Typography variant="h6">Dormant Gems</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {activatedGems.length > 0 && <TotalPowerLine label="Total activation cost:" amount={totalActivationCost} sign="-" />}
             {newlyDormant.length > 0 && <TotalPowerLine label="Total recovered:" amount={totalGained} sign="+" />}
+            {activatedGems.length > 0 && <TotalPowerLine label="Total activation cost:" amount={totalActivationCost} sign="-" />}
           </Box>
         </Box>
         <Divider sx={{ mb: 2 }} />
+        {newlyDormant.length > 0 && (
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: activatedGems.length > 0 ? 2 : 0 }}>
+            {newlyDormant.map((item) => (
+              <GemPowerTile
+                key={`${item.gem_id}|${item.rank}|${item.active_stars}`}
+                gemId={item.gem_id}
+                rank={item.rank}
+                starRating={item.star_rating}
+                quantity={item.quantity}
+                powerAmount={item.gem_power_gained}
+                sign="+"
+                grayscale
+              />
+            ))}
+          </Box>
+        )}
         {activatedGems.length > 0 && (
           <>
+            {newlyDormant.length > 0 && <Divider sx={{ mb: 2 }} />}
             <Typography variant="subtitle2" gutterBottom>
               Recommended to Activate
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: newlyDormant.length > 0 ? 2 : 0 }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
               {activatedGems.map((item) => (
                 <GemPowerTile
                   key={`${item.gem_id}|${item.rank}|${item.active_stars}`}
@@ -114,25 +131,6 @@ export default function DormantGemsSection({ dormantGems, activatedGems }: Props
                   quantity={item.quantity}
                   powerAmount={item.gem_power_cost}
                   sign="-"
-                />
-              ))}
-            </Box>
-          </>
-        )}
-        {newlyDormant.length > 0 && (
-          <>
-            {activatedGems.length > 0 && <Divider sx={{ mb: 2 }} />}
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              {newlyDormant.map((item) => (
-                <GemPowerTile
-                  key={`${item.gem_id}|${item.rank}|${item.active_stars}`}
-                  gemId={item.gem_id}
-                  rank={item.rank}
-                  starRating={item.star_rating}
-                  quantity={item.quantity}
-                  powerAmount={item.gem_power_gained}
-                  sign="+"
-                  grayscale
                 />
               ))}
             </Box>

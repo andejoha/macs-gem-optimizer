@@ -12,9 +12,10 @@ import { describe, expect, it } from 'vitest';
 import { COST_TABLES } from '../../../src/core/data';
 import { runPipeline } from '../../../src/core/pipeline';
 import { computeContribution, numSocketsUnlocked } from '../../../src/core/rules';
+import { computeUpgradeDelta } from '../../../src/core/upgrades';
 import { requestToDomain, domainToResponse } from '../../../src/core/api/converters';
 import type { OptimizeRequest } from '../../../src/core/api/types';
-import type { MainGem } from '../../../src/core/models';
+import type { MainGem, UpgradeOptimizationResult } from '../../../src/core/models';
 
 describe('requestToDomain', () => {
   it('preserves the dormant flag per inventory item without merging identical identities', () => {
@@ -90,5 +91,39 @@ describe('domainToResponse: activated_dormant_gems', () => {
     // and is still reported as a dormant no-op via already_dormant_quantity
     // when the caller passes alreadyDormantCounter's output.
     expect(response.dormant_gems.find((d) => d.gem_id === 5002)).toBeUndefined();
+  });
+
+  it('reports the pre-upgrade rank and cost for a dormant copy that was also upgraded this run', () => {
+    // Simulates a dormant rank-"2" copy that the upgrade search advanced to
+    // rank "4" before socketing it -- the inventory passed to
+    // domainToResponse already reflects the post-upgrade rank.
+    const request: OptimizeRequest = {
+      gem_power: 10_000,
+      gem_setup: { head: { gem_id: 5001, target_rank: '6', active_stars: 2 } },
+      inventory: [{ gem_id: 5001, rank: '4', active_stars: 2, dormant: true }],
+    };
+
+    const { availablePower, mainGems, skippedSlots, inventory } = requestToDomain(request);
+    const result = runPipeline(availablePower, mainGems, skippedSlots, inventory);
+
+    const upgradeDelta = computeUpgradeDelta(5, '2', '4', 0, 5001);
+    const upgradeResult: UpgradeOptimizationResult = {
+      baseline: result,
+      upgraded: result,
+      upgradesApplied: [upgradeDelta],
+      totalUpgradeCost: upgradeDelta.additionalGemPower,
+      effectiveResidual: result.totalResidualCost + upgradeDelta.additionalGemPower,
+      improvement: 0,
+    };
+
+    const response = domainToResponse(result, upgradeResult, inventory);
+
+    expect(response.gem_results.head?.sockets[3].assigned_gem_rank).toBe('4');
+    // Reported at rank "2" (its rank when it was dormant, requiredGemPower
+    // 50), not rank "4" (the rank the upgrade search advanced it to before
+    // socketing it, requiredGemPower 225).
+    expect(response.activated_dormant_gems).toEqual([
+      { gem_id: 5001, star_rating: 5, rank: '2', active_stars: 2, quantity: 1, gem_power_cost: 50 },
+    ]);
   });
 });
