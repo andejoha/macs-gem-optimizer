@@ -31,6 +31,33 @@ interface GemIdentity {
   activeStars: number;
 }
 
+/**
+ * Maps each upgraded gem type's final rank back to the rank it started
+ * from, keyed by `gemId|starRating|finalRank`. `upgradesApplied` lists every
+ * kept upgrade step in chain order, so the first delta seen for a type is
+ * always its starting rank and the last is its final rank. A copy of the
+ * same type that was never upgraded but happens to already sit at that
+ * final rank on input is indistinguishable from the upgraded one and will
+ * also be mapped, though only one copy per type is ever an upgrade target.
+ */
+function preUpgradeRanksByFinalRank(upgradeResult: UpgradeOptimizationResult | null): Map<string, string> {
+  if (upgradeResult === null) return new Map();
+
+  const startRankByType = new Map<string, string>();
+  const finalRankByType = new Map<string, string>();
+  for (const delta of upgradeResult.upgradesApplied) {
+    const typeKey = `${delta.gemId}|${delta.starRating}`;
+    if (!startRankByType.has(typeKey)) startRankByType.set(typeKey, delta.currentRank);
+    finalRankByType.set(typeKey, delta.targetRank);
+  }
+
+  const result = new Map<string, string>();
+  for (const [typeKey, startRank] of startRankByType) {
+    result.set(`${typeKey}|${finalRankByType.get(typeKey)!}`, startRank);
+  }
+  return result;
+}
+
 function validRanksMessage(costTable: ReadonlyMap<string, { requiredGems: number; requiredGemPower: number }>): string {
   const valid = [...costTable.keys()].sort((rankA, rankB) => {
     const entryA = costTable.get(rankA)!;
@@ -308,16 +335,20 @@ export function domainToResponse(
   const dormantIdentity = new Map<string, GemIdentity>();
   // Tallies copies that were marked dormant on input but ended up assigned
   // to a socket this run -- i.e. the optimizer recommended activating them.
+  // A copy that was also upgraded this run is reported at the rank it had
+  // before the upgrade, since that's the rank it was dormant at.
+  const preUpgradeRanks = preUpgradeRanksByFinalRank(upgradeResult);
   const activatedByGem = new Map<string, { identity: GemIdentity; count: number; powerCost: number }>();
   inventory.forEach((gem, index) => {
     if (assignedIds.has(index)) {
       if (gem.dormant) {
-        const key = dormantKey(gem.gemId, gem.starRating, gem.rank, gem.activeStars);
-        const identity: GemIdentity = { gemId: gem.gemId, starRating: gem.starRating, rank: gem.rank, activeStars: gem.activeStars };
+        const rank = preUpgradeRanks.get(`${gem.gemId}|${gem.starRating}|${gem.rank}`) ?? gem.rank;
+        const key = dormantKey(gem.gemId, gem.starRating, rank, gem.activeStars);
+        const identity: GemIdentity = { gemId: gem.gemId, starRating: gem.starRating, rank, activeStars: gem.activeStars };
         // Same figure as gem_power_gained below, computed for the opposite
         // direction: the power spent pulling this copy out of dormancy is
         // exactly what would be recovered by making it dormant again.
-        const powerCost = computeExtractablePower(gem.rank, COST_TABLES.get(gem.starRating)!);
+        const powerCost = computeExtractablePower(rank, COST_TABLES.get(gem.starRating)!);
         const existing = activatedByGem.get(key);
         if (existing) {
           existing.count += 1;
