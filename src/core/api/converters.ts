@@ -10,6 +10,7 @@ import { makeInventoryGem } from '../models';
 import { computeContribution, computeExtractablePower, computeSocketResonanceBonus, numSocketsUnlocked, sumDormantPower } from '../rules';
 import { ValidationError } from './validate';
 import type {
+  ActivatedGemItem,
   DormantGemItem,
   GemResults,
   OptimizeRequest,
@@ -21,6 +22,14 @@ import type {
   UpgradeItem,
   UpgradesResponse,
 } from './types';
+
+/** Identifies a gem by its socketable properties, independent of any specific copy. */
+interface GemIdentity {
+  gemId: number;
+  starRating: number;
+  rank: string;
+  activeStars: number;
+}
 
 function validRanksMessage(costTable: ReadonlyMap<string, { requiredGems: number; requiredGemPower: number }>): string {
   const valid = [...costTable.keys()].sort((rankA, rankB) => {
@@ -105,6 +114,7 @@ export function requestToDomain(request: OptimizeRequest): DomainRequest {
         quantity: 1,
         activeStars: inventoryItem.active_stars,
         contribution,
+        dormant: !!inventoryItem.dormant,
       }),
     );
   });
@@ -281,9 +291,9 @@ export function domainToResponse(
     };
   }
 
-  // Compute remaining inventory and dormant gems in a single pass over the
-  // unassigned copies (inventory index equals copy id here, since
-  // requestToDomain always builds one InventoryGem entry per copy).
+  // Compute remaining inventory, dormant gems, and activated-dormant gems in
+  // a single pass over all copies (inventory index equals copy id here,
+  // since requestToDomain always builds one InventoryGem entry per copy).
   const assignedIds = new Set<number>();
   for (const assignments of result.gemAssignments.values()) {
     for (const assignment of assignments) {
@@ -295,9 +305,29 @@ export function domainToResponse(
   // Map, not a plain object, since dormant_gems array order is directly
   // observable in the response.
   const dormantPowerByGem = new Map<string, number[]>();
-  const dormantIdentity = new Map<string, { gemId: number; starRating: number; rank: string; activeStars: number }>();
+  const dormantIdentity = new Map<string, GemIdentity>();
+  // Tallies copies that were marked dormant on input but ended up assigned
+  // to a socket this run -- i.e. the optimizer recommended activating them.
+  const activatedByGem = new Map<string, { identity: GemIdentity; count: number; powerCost: number }>();
   inventory.forEach((gem, index) => {
-    if (assignedIds.has(index)) return;
+    if (assignedIds.has(index)) {
+      if (gem.dormant) {
+        const key = dormantKey(gem.gemId, gem.starRating, gem.rank, gem.activeStars);
+        const identity: GemIdentity = { gemId: gem.gemId, starRating: gem.starRating, rank: gem.rank, activeStars: gem.activeStars };
+        // Same figure as gem_power_gained below, computed for the opposite
+        // direction: the power spent pulling this copy out of dormancy is
+        // exactly what would be recovered by making it dormant again.
+        const powerCost = computeExtractablePower(gem.rank, COST_TABLES.get(gem.starRating)!);
+        const existing = activatedByGem.get(key);
+        if (existing) {
+          existing.count += 1;
+          existing.powerCost += powerCost;
+        } else {
+          activatedByGem.set(key, { identity, count: 1, powerCost });
+        }
+      }
+      return;
+    }
     remainingInventory.push({
       gem_id: gem.gemId,
       star_rating: gem.starRating,
@@ -316,6 +346,15 @@ export function domainToResponse(
       }
     }
   });
+
+  const activatedDormantGems: ActivatedGemItem[] = Array.from(activatedByGem.values()).map(({ identity, count, powerCost }) => ({
+    gem_id: identity.gemId,
+    star_rating: identity.starRating,
+    rank: identity.rank,
+    active_stars: identity.activeStars,
+    quantity: count,
+    gem_power_cost: powerCost,
+  }));
 
   const totalDormantPower = sumDormantPower(inventory, assignedIds);
 
@@ -363,5 +402,6 @@ export function domainToResponse(
     remaining_inventory: remainingInventory,
     converted_gems: [],
     dormant_gems: dormantGems,
+    activated_dormant_gems: activatedDormantGems,
   };
 }

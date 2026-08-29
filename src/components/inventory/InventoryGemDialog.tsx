@@ -18,7 +18,7 @@ import { useTheme } from '@mui/material/styles';
 import type { GemInfo } from '../../types/api';
 import type { InventoryGemStack } from '../../types/inventory';
 import { getGemImageUrl, defaultGemImage } from '../../utils/gearAssets';
-import { getMaxSubRank, parseRank } from '../../utils/rankUtils';
+import { canBeDormant, getMaxSubRank, parseRank } from '../../utils/rankUtils';
 import { dormantContribution } from '../../utils/gemPowerCost';
 import StarRatingSelector from '../gear/StarRatingSelector';
 
@@ -151,7 +151,7 @@ export default function InventoryGemDialog({ open, currentStack, gems, gemPower,
                   </Typography>
                   <StarRatingSelector starRating={selectedGem.star_rating} activeStars={activeStars} onChange={setActiveStars} />
                 </Box>
-                {effectiveMainRank > 1 && (
+                {canBeDormant(effectiveRank) && (
                   <Tooltip title={`Dormant: ${dormant ? 'on' : 'off'}`}>
                     <ButtonBase
                       onClick={() => setDormant((d) => !d)}

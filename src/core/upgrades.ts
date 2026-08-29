@@ -256,6 +256,7 @@ export function buildUpgradeChains(
         quantity: oldGem.quantity,
         activeStars: oldGem.activeStars,
         contribution: newContribution,
+        dormant: oldGem.dormant,
       });
       const sacrificedGems = sacrificeIndices.map((index) => workingSub[index]);
       // Remove highest indices first so earlier indices stay valid.

@@ -35,10 +35,14 @@ export interface InventoryGem {
   activeStars: number;
   /** Pre-computed gem power this copy contributes when socketed. */
   contribution: number;
+  /** Whether this copy was marked dormant by the player before this request. */
+  dormant?: boolean;
 }
 
-export function makeInventoryGem(partial: Omit<InventoryGem, 'contribution'> & { contribution?: number }): InventoryGem {
-  return { contribution: 0, ...partial };
+export function makeInventoryGem(
+  partial: Omit<InventoryGem, 'contribution' | 'dormant'> & { contribution?: number; dormant?: boolean },
+): InventoryGem {
+  return { contribution: 0, dormant: false, ...partial };
 }
 
 /**

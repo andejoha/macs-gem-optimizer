@@ -41,3 +41,15 @@ export function formatRank(targetRank: string, starRating: number): string {
   const pct = subRankToPercent(sub, maxSub);
   return `Rank ${main} (${pct}%)`;
 }
+
+/**
+ * Whether a gem at this rank can ever be marked dormant, regardless of star
+ * rating: rank 1 has no extractable power (see computeExtractablePower), so
+ * making it dormant would recover nothing. The same rule governs whether
+ * copies of the gem are allowed to stack in the inventory grid -- a rank-1
+ * gem is always shown/edited as an individual copy, the same as a dormant
+ * one (see splitDormantStacks).
+ */
+export function canBeDormant(rank: string): boolean {
+  return parseRank(rank)[0] > 1;
+}

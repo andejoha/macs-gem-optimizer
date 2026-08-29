@@ -144,6 +144,17 @@ export interface DormantGemItem {
   already_dormant_quantity: number;
 }
 
+/** A gem the player had marked dormant before this request that the optimizer assigned to a socket. */
+export interface ActivatedGemItem {
+  gem_id: number;
+  star_rating: number;
+  rank: string;
+  active_stars: number;
+  quantity: number;
+  /** Gem power spent activating these copies -- the same figure that would be recovered (gem_power_gained) if they were made dormant instead. */
+  gem_power_cost: number;
+}
+
 export interface OptimizeResponse {
   summary: SummaryResponse;
   gem_results: GemResults;
@@ -151,6 +162,7 @@ export interface OptimizeResponse {
   remaining_inventory: RemainingInventoryItem[];
   converted_gems: ConvertedGemItem[];
   dormant_gems: DormantGemItem[];
+  activated_dormant_gems: ActivatedGemItem[];
 }
 
 export interface BonusSocket {
