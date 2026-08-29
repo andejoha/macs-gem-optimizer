@@ -254,6 +254,20 @@ describe('materializeUpgrades', () => {
     const { working } = materializeUpgrades(chains, [0], leftover);
     expect(working.some((g) => g.gemId === 1001)).toBe(true);
   });
+
+  it('a dormant-marked target copy keeps dormant:true after being upgraded a rank', () => {
+    // The highest-contribution copy becomes the chain's target and gets
+    // reconstructed via makeInventoryGem at each step (see upgrades.ts's
+    // buildUpgradeChains) -- this is the one spot that must carry the
+    // dormant flag forward explicitly instead of losing it.
+    const inventory = Array.from({ length: 4 }, () => ({ ...inv(2033, 2, '1'), dormant: true }));
+    const { chains, leftover } = buildUpgradeChains(inventory, new Map([[2, 99]]));
+    expect(chains[0].baseSubInventory[0].dormant).toBe(true);
+
+    const { working } = materializeUpgrades(chains, [1], leftover);
+    const upgraded = working.find((g) => g.gemId === 2033 && g.rank === '4');
+    expect(upgraded?.dormant).toBe(true);
+  });
 });
 
 describe('filterUpgradesToSocketed', () => {

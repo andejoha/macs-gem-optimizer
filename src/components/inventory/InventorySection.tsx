@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 import IconButton from '../buttons/IconButton';
 import { useGemData } from '../../contexts/useGemData';
 import type { InventoryGemStack } from '../../types/inventory';
-import { inventoryStackKey } from '../../types/inventory';
+import { inventoryStackKey, sourceStackId } from '../../types/inventory';
 import { generateId } from '../../utils/setupCodec';
 import { dormantContribution } from '../../utils/gemPowerCost';
 import GemPowerInput from './GemPowerInput';
@@ -42,14 +42,38 @@ export default function InventorySection({ gemPower, onGemPowerChange, stacks, o
     setEditingId(null);
   }
 
+  // The grid shows some stacks split into one tile per copy (see
+  // splitStacksAboveRankOne), so `editingId` may be a split id that doesn't
+  // match any real stack. It's resolved back to its source stack here, and
+  // `currentStack` represents just the one copy being edited.
+  const sourceId = editingId ? sourceStackId(editingId) : null;
+  const isSplitUnit = editingId !== null && editingId !== sourceId;
+  const source = sourceId ? (stacks.find((s) => s.id === sourceId) ?? null) : null;
+  let currentStack: InventoryGemStack | null = null;
+  if (source !== null) {
+    currentStack = isSplitUnit ? { ...source, id: editingId!, quantity: 1 } : source;
+  }
+
   function handleSave(data: Omit<InventoryGemStack, 'id'>) {
     const key = inventoryStackKey(data);
 
     // GP delta applies only when editing an existing stack (not when adding a new gem).
-    const prev = editingId ? (stacks.find((s) => s.id === editingId) ?? null) : null;
-    const gpDelta = prev !== null ? dormantContribution(data) - dormantContribution(prev) : 0;
+    const gpDelta = currentStack !== null ? dormantContribution(data) - dormantContribution(currentStack) : 0;
 
-    if (editingId === null) {
+    if (isSplitUnit) {
+      // Release exactly the one copy being edited from its source stack,
+      // then merge/add the edited result the same way a new gem would be.
+      const withoutOne =
+        source && source.quantity > 1
+          ? stacks.map((s) => (s.id === sourceId ? { ...s, quantity: s.quantity - 1 } : s))
+          : stacks.filter((s) => s.id !== sourceId);
+      const existing = withoutOne.find((s) => inventoryStackKey(s) === key);
+      if (existing) {
+        onStacksChange(withoutOne.map((s) => (s.id === existing.id ? { ...s, quantity: s.quantity + data.quantity } : s)));
+      } else {
+        onStacksChange([...withoutOne, { ...data, id: generateId() }]);
+      }
+    } else if (editingId === null) {
       const existing = stacks.find((s) => inventoryStackKey(s) === key);
       if (existing) {
         onStacksChange(stacks.map((s) => (s.id === existing.id ? { ...s, quantity: s.quantity + data.quantity } : s)));
@@ -76,11 +100,13 @@ export default function InventorySection({ gemPower, onGemPowerChange, stacks, o
   }
 
   function handleRemove() {
-    onStacksChange(stacks.filter((s) => s.id !== editingId));
+    onStacksChange(
+      isSplitUnit && source
+        ? stacks.map((s) => (s.id === sourceId ? { ...s, quantity: s.quantity - 1 } : s))
+        : stacks.filter((s) => s.id !== editingId),
+    );
     handleClose();
   }
-
-  const currentStack = editingId ? (stacks.find((s) => s.id === editingId) ?? null) : null;
 
   return (
     <Box>

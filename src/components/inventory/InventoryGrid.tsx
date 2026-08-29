@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import type { InventoryGemStack } from '../../types/inventory';
+import { splitStacksAboveRankOne } from '../../types/inventory';
 import { parseRank } from '../../utils/rankUtils';
 import InventoryTile from './InventoryTile';
 
@@ -40,9 +41,12 @@ export default function InventoryGrid({ stacks, gemOrder, onTileClick, onEmptyCl
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const COLS = isMobile ? COLS_MOBILE : COLS_DEFAULT;
-  const sorted = useMemo(() => sortStacks(stacks, gemOrder), [stacks, gemOrder]);
-  const baseRows = Math.max(MIN_ROWS, Math.ceil(stacks.length / COLS));
-  const rows = stacks.length > 0 && stacks.length % COLS === 0 ? baseRows + 1 : baseRows;
+  // Stacks above rank 1 are split into one tile per copy so each can be
+  // edited individually, instead of being locked behind a shared quantity
+  // (see splitStacksAboveRankOne).
+  const sorted = useMemo(() => sortStacks(splitStacksAboveRankOne(stacks), gemOrder), [stacks, gemOrder]);
+  const baseRows = Math.max(MIN_ROWS, Math.ceil(sorted.length / COLS));
+  const rows = sorted.length > 0 && sorted.length % COLS === 0 ? baseRows + 1 : baseRows;
   const totalCells = rows * COLS;
   const emptyCount = totalCells - sorted.length;
 

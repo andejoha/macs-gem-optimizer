@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getMaxSubRank } from '../../src/utils/rankUtils';
+import { canBeDormant, getMaxSubRank } from '../../src/utils/rankUtils';
 
 // Pins the cost-table-derived MAX_SUB_RANK against the original hand-written
 // literal it replaced, so a future cost-table change can't silently drift
@@ -21,5 +21,18 @@ describe('getMaxSubRank', () => {
   it('returns 0 for ranks with no sub-ranks', () => {
     expect(getMaxSubRank(5, 10)).toBe(0);
     expect(getMaxSubRank(2, 1)).toBe(0);
+  });
+});
+
+describe('canBeDormant', () => {
+  it('is false for rank 1, regardless of any sub-rank suffix', () => {
+    expect(canBeDormant('1')).toBe(false);
+    expect(canBeDormant('1.5')).toBe(false);
+  });
+
+  it('is true for any rank above 1', () => {
+    expect(canBeDormant('2')).toBe(true);
+    expect(canBeDormant('4.2')).toBe(true);
+    expect(canBeDormant('10')).toBe(true);
   });
 });

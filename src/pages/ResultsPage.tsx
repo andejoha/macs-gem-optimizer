@@ -119,7 +119,8 @@ export default function ResultsPage() {
     return <Navigate to="/" replace />;
   }
 
-  const { summary, gem_results, upgrades, remaining_inventory, converted_gems, dormant_gems } = state.optimizeResponse;
+  const { summary, gem_results, upgrades, remaining_inventory, converted_gems, dormant_gems, activated_dormant_gems } =
+    state.optimizeResponse;
 
   return (
     <Box sx={{ width: PAGE_MAX_WIDTH, maxWidth: '100%', mx: 'auto' }}>
@@ -157,9 +158,11 @@ export default function ResultsPage() {
       <Stack spacing={3}>
         <SummaryCard summary={summary} />
 
-        {converted_gems && converted_gems.length > 0 && <ConvertedGemsSection convertedGems={converted_gems} />}
+        {(dormant_gems?.some((d) => d.quantity > 0) || (activated_dormant_gems?.length ?? 0) > 0) && (
+          <DormantGemsSection dormantGems={dormant_gems ?? []} activatedGems={activated_dormant_gems ?? []} />
+        )}
 
-        {dormant_gems && dormant_gems.some((d) => d.quantity > 0) && <DormantGemsSection dormantGems={dormant_gems} />}
+        {converted_gems && converted_gems.length > 0 && <ConvertedGemsSection convertedGems={converted_gems} />}
 
         {upgrades && upgrades.upgrades_applied.length > 0 && <UpgradesSection upgrades={upgrades} />}
 
