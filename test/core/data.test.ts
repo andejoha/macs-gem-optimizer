@@ -23,10 +23,10 @@ describe('GEMS ordering (critical hazard: GEMS is NOT in ascending ID order)', (
     expect([...GEMS.keys()]).toEqual(GEM_LIST.map((g) => g.id));
   });
 
-  it('has 92 gems: 28 five-star, 34 two-star, 30 one-star', () => {
-    expect(GEM_LIST.length).toBe(92);
-    expect(GEM_LIST.filter((g) => g.starRating === 5).length).toBe(28);
-    expect(GEM_LIST.filter((g) => g.starRating === 2).length).toBe(34);
+  it('has 95 gems: 29 five-star, 36 two-star, 30 one-star', () => {
+    expect(GEM_LIST.length).toBe(95);
+    expect(GEM_LIST.filter((g) => g.starRating === 5).length).toBe(29);
+    expect(GEM_LIST.filter((g) => g.starRating === 2).length).toBe(36);
     expect(GEM_LIST.filter((g) => g.starRating === 1).length).toBe(30);
   });
 });

@@ -179,7 +179,7 @@ const GEM_LIST: readonly GemDef[] = [
   { id: 5026, name: 'Fated Trail', starRating: 5, bonusGemIds: [2014, 2023, 2025, 5006, 5017] },
   { id: 5027, name: 'Leviathan Tomb', starRating: 5, bonusGemIds: [2003, 2026, 2028, 5021, 5022] },
   { id: 5028, name: 'Hellbound Desire', starRating: 5, bonusGemIds: [2023, 2025, 2017, 5009, 5016] },
-  { id: 5029, name: 'Enigma Latera', starRating: 5, bonusGemIds: [2031, 2028, 2026, 5016, 2026] },
+  { id: 5029, name: 'Enigma Latera', starRating: 5, bonusGemIds: [2031, 2028, 2026, 5016, 5026] },
   // ----- 2-star gems -----
   { id: 2001, name: 'Power & Command', starRating: 2, bonusGemIds: [1007, 2003, 2004] },
   { id: 2002, name: "Follower's Burden", starRating: 2, bonusGemIds: [1017, 2001, 2005] },
