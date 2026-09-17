@@ -15,7 +15,7 @@ function IconValue({ icon, value, color }: { icon: string; value: number; color?
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
       <Box component="img" src={icon} sx={{ width: 18, height: 18 }} />
-      <Typography variant="body1" color={color ?? 'text.primary'} fontWeight={600}>
+      <Typography variant="body1" color={color ?? 'text.primary'} sx={{ fontWeight: 600 }}>
         {value.toLocaleString()}
       </Typography>
     </Box>

@@ -34,7 +34,7 @@ export default function ConvertedGemsSection({ convertedGems }: Props) {
               Total gained:
             </Typography>
             <Box component="img" src={gemPowerIcon} sx={{ width: 16, height: 16 }} />
-            <Typography variant="body1" fontWeight={600} color="success.main">
+            <Typography variant="body1" color="success.main" sx={{ fontWeight: 600 }}>
               +{totalGained.toLocaleString()}
             </Typography>
           </Box>
@@ -62,7 +62,7 @@ export default function ConvertedGemsSection({ convertedGems }: Props) {
                   </Typography>
                   <Box component="img" src={arrowBackwardIcon} sx={{ width: 12, height: 12, transform: 'scaleX(-1)' }} />
                   <Box component="img" src={gemPowerIcon} sx={{ width: 14, height: 14 }} />
-                  <Typography variant="body2" fontWeight={600} color="success.main">
+                  <Typography variant="body2" color="success.main" sx={{ fontWeight: 600 }}>
                     +{item.gem_power_gained}
                   </Typography>
                 </Box>

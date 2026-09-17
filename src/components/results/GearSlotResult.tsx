@@ -62,7 +62,7 @@ export default function GearSlotResult({ slotName, slotResult }: Props) {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
               <Box component="img" src={getGemImageUrl(slotResult.gem_id)} sx={{ width: 40, height: 40 }} />
               <Box>
-                <Typography variant="body1" fontWeight={600}>
+                <Typography variant="body1" sx={{ fontWeight: 600 }}>
                   {gemName}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
@@ -82,7 +82,7 @@ export default function GearSlotResult({ slotName, slotResult }: Props) {
             <Box sx={{ mb: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                 <Box component="img" src={gemPowerIcon} sx={{ width: 18, height: 18 }} />
-                <Typography variant="body1" fontWeight={600}>
+                <Typography variant="body1" sx={{ fontWeight: 600 }}>
                   {slotResult.required_power.toLocaleString()}
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
@@ -97,9 +97,8 @@ export default function GearSlotResult({ slotName, slotResult }: Props) {
                 <Tooltip title="Residual: the gem power drawn from your pool after socketed gems offset the awakening cost">
                   <Typography
                     variant="body1"
-                    fontWeight={600}
                     color={slotResult.residual_cost === 0 ? 'success.main' : 'warning.main'}
-                    sx={{ cursor: 'help', textDecorationStyle: 'dotted', textDecorationLine: 'underline' }}
+                    sx={{ fontWeight: 600, cursor: 'help', textDecorationStyle: 'dotted', textDecorationLine: 'underline' }}
                   >
                     {slotResult.residual_cost.toLocaleString()}
                   </Typography>
@@ -110,7 +109,7 @@ export default function GearSlotResult({ slotName, slotResult }: Props) {
             {/* Resonance */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
               <Box component="img" src={resonanceIcon} sx={{ width: 18, height: 18 }} />
-              <Typography variant="body1" fontWeight={600}>
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
                 {slotResult.total_resonance}
               </Typography>
               <Typography variant="body2" color="text.secondary">

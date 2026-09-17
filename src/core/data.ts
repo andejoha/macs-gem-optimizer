@@ -179,6 +179,7 @@ const GEM_LIST: readonly GemDef[] = [
   { id: 5026, name: 'Fated Trail', starRating: 5, bonusGemIds: [2014, 2023, 2025, 5006, 5017] },
   { id: 5027, name: 'Leviathan Tomb', starRating: 5, bonusGemIds: [2003, 2026, 2028, 5021, 5022] },
   { id: 5028, name: 'Hellbound Desire', starRating: 5, bonusGemIds: [2023, 2025, 2017, 5009, 5016] },
+  { id: 5029, name: 'Enigma Latera', starRating: 5, bonusGemIds: [2031, 2028, 2026, 5016, 5026] },
   // ----- 2-star gems -----
   { id: 2001, name: 'Power & Command', starRating: 2, bonusGemIds: [1007, 2003, 2004] },
   { id: 2002, name: "Follower's Burden", starRating: 2, bonusGemIds: [1017, 2001, 2005] },
@@ -214,6 +215,8 @@ const GEM_LIST: readonly GemDef[] = [
   { id: 2032, name: 'The Crucible', starRating: 2, bonusGemIds: [1023, 2026, 2023] },
   { id: 2033, name: 'Baneboil', starRating: 2, bonusGemIds: [1028, 2029, 2028] },
   { id: 2034, name: 'The Jolted Eye', starRating: 2, bonusGemIds: [1012, 2004, 2010] },
+  { id: 2035, name: 'Seething Polestar', starRating: 2, bonusGemIds: [1024, 2025, 2029] },
+  { id: 2036, name: 'Prong Crag', starRating: 2, bonusGemIds: [1025, 2031, 2029] },
   // ----- 1-star gems -----
   { id: 1001, name: 'The Black Rose', starRating: 1, bonusGemIds: [1009, 1010] },
   { id: 1002, name: 'Nightmare Wreath', starRating: 1, bonusGemIds: [1011, 1012] },

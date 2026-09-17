@@ -110,8 +110,8 @@ export default function InventorySection({ gemPower, onGemPowerChange, stacks, o
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
           <GemPowerInput value={gemPower} onChange={onGemPowerChange} />
         </Stack>
         <IconButton size="xxs" icon="plus" onClick={handleOpenAdd} />

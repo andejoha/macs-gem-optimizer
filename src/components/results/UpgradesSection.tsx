@@ -36,8 +36,8 @@ export default function UpgradesSection({ upgrades }: Props) {
             <Box component="img" src={gemPowerIcon} sx={{ width: 16, height: 16 }} />
             <Typography
               variant="body2"
-              fontWeight={600}
               color={upgrades.baseline_summary.surplus_or_shortfall >= 0 ? 'success.main' : 'error.main'}
+              sx={{ fontWeight: 600 }}
             >
               {upgrades.baseline_summary.surplus_or_shortfall >= 0
                 ? `+${upgrades.baseline_summary.surplus_or_shortfall.toLocaleString()}`
@@ -51,7 +51,7 @@ export default function UpgradesSection({ upgrades }: Props) {
               Upgrade cost:
             </Typography>
             <Box component="img" src={gemPowerIcon} sx={{ width: 16, height: 16 }} />
-            <Typography variant="body1" fontWeight={600}>
+            <Typography variant="body1" sx={{ fontWeight: 600 }}>
               {upgrades.total_upgrade_cost.toLocaleString()}
             </Typography>
           </Box>
@@ -63,7 +63,7 @@ export default function UpgradesSection({ upgrades }: Props) {
               {upgrades.baseline_residual_cost.toLocaleString()}
             </Typography>
             <Box component="img" src={arrowBackwardIcon} sx={{ width: 14, height: 14, transform: 'scaleX(-1)', mx: '4px' }} />
-            <Typography variant="body1" fontWeight={600}>
+            <Typography variant="body1" sx={{ fontWeight: 600 }}>
               {upgrades.upgraded_residual_cost.toLocaleString()}
             </Typography>
           </Box>
@@ -112,7 +112,7 @@ export default function UpgradesSection({ upgrades }: Props) {
               {/* Result gem */}
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
                 <Box component="img" src={getGemImageUrl(item.gem_id)} sx={{ width: 36, height: 36 }} />
-                <Typography variant="body2" color="success.main" fontWeight={600}>
+                <Typography variant="body2" color="success.main" sx={{ fontWeight: 600 }}>
                   {formatRank(item.target_rank, item.star_rating)}
                 </Typography>
               </Box>
@@ -123,7 +123,7 @@ export default function UpgradesSection({ upgrades }: Props) {
                   Net gain:
                 </Typography>
                 <Box component="img" src={gemPowerIcon} sx={{ width: 16, height: 16 }} />
-                <Typography variant="body1" fontWeight={600} color={item.net_gain >= 0 ? 'success.main' : 'error.main'}>
+                <Typography variant="body1" color={item.net_gain >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 600 }}>
                   {item.net_gain >= 0 ? `+${item.net_gain}` : item.net_gain}
                 </Typography>
               </Box>
