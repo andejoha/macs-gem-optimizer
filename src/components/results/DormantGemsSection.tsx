@@ -23,7 +23,7 @@ function TotalPowerLine({ label, amount, sign }: { label: string; amount: number
         {label}
       </Typography>
       <Box component="img" src={gemPowerIcon} sx={{ width: 16, height: 16 }} />
-      <Typography variant="body1" fontWeight={600} color={sign === '+' ? 'success.main' : 'error.main'}>
+      <Typography variant="body1" color={sign === '+' ? 'success.main' : 'error.main'} sx={{ fontWeight: 600 }}>
         {sign}
         {amount.toLocaleString()}
       </Typography>
@@ -69,7 +69,7 @@ function GemPowerTile({
           </Typography>
           <Box component="img" src={arrowBackwardIcon} sx={{ width: 12, height: 12, ...(sign === '+' && { transform: 'scaleX(-1)' }) }} />
           <Box component="img" src={gemPowerIcon} sx={{ width: 14, height: 14 }} />
-          <Typography variant="body2" fontWeight={600} color={sign === '+' ? 'success.main' : 'error.main'}>
+          <Typography variant="body2" color={sign === '+' ? 'success.main' : 'error.main'} sx={{ fontWeight: 600 }}>
             {sign}
             {powerAmount}
           </Typography>

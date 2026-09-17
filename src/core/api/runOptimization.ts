@@ -401,8 +401,8 @@ export function runOptimization(
   }
 
   let surplusFound = false;
-  let socketedIdentitySet: Set<string> = new Set();
-  let netResidual = 0;
+  let socketedIdentitySet: Set<string>;
+  let netResidual: number;
 
   while (!surplusFound) {
     // Restore two-star chains to their maximum depth for this five-star configuration.

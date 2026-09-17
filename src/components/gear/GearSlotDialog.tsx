@@ -77,7 +77,7 @@ export default function GearSlotDialog({ open, slotName, currentItem, gems, onSa
   return (
     <Dialog open={open} onClose={onClose} fullScreen={fullScreen} maxWidth="xs" fullWidth>
       <DialogTitle>
-        <Stack direction="row" spacing={1.5} alignItems="center">
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
           <Box
             component="img"
             src={selectedGem ? getGemImageUrl(selectedGem.id) : defaultGemImage}

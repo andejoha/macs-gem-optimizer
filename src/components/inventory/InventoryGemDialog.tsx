@@ -112,7 +112,7 @@ export default function InventoryGemDialog({ open, currentStack, gems, gemPower,
   return (
     <Dialog open={open} onClose={onClose} fullScreen={fullScreen} maxWidth="xs" fullWidth>
       <DialogTitle>
-        <Stack direction="row" spacing={1.5} alignItems="center">
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
           <Box
             component="img"
             src={selectedGem ? getGemImageUrl(selectedGem.id) : defaultGemImage}
@@ -144,7 +144,7 @@ export default function InventoryGemDialog({ open, currentStack, gems, gemPower,
 
           {selectedGem && (
             <Box>
-              <Stack direction="row" alignItems="flex-end" justifyContent="space-between">
+              <Stack direction="row" sx={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
                 <Box>
                   <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
                     Active Stars
@@ -166,7 +166,7 @@ export default function InventoryGemDialog({ open, currentStack, gems, gemPower,
                 )}
               </Stack>
               {gpInsufficient && (
-                <Typography variant="caption" color="error" display="block" sx={{ mt: 0.5 }}>
+                <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
                   Not enough Gem Power to reactivate this gem.
                 </Typography>
               )}
@@ -210,7 +210,7 @@ export default function InventoryGemDialog({ open, currentStack, gems, gemPower,
               value={quantityStr}
               onChange={(e) => setQuantityStr(e.target.value)}
               onBlur={handleQuantityBlur}
-              inputProps={{ min: 1 }}
+              slotProps={{ htmlInput: { min: 1 } }}
             />
           )}
         </Stack>

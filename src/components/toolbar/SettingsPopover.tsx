@@ -84,7 +84,7 @@ export default function SettingsPopover({
             Settings
           </Typography>
           <Divider sx={{ mb: 1.5 }} />
-          <Stack spacing={1} alignItems="stretch">
+          <Stack spacing={1} sx={{ alignItems: 'stretch' }}>
             <FeatureToggle label="Suggest upgrades" checked={enableUpgrades} onChange={onEnableUpgradesChange} disabled={disabled} />
             <FeatureToggle label={convert1StarLabel} checked={convert1Star} onChange={onConvert1StarChange} disabled={disabled} />
             <SettingRow

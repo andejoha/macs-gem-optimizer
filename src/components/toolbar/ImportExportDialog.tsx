@@ -61,7 +61,7 @@ export default function ImportExportDialog({ open, mode, exportCode, gemById, on
             fullWidth
             multiline
             minRows={3}
-            inputProps={{ readOnly: true, style: { fontFamily: 'monospace', fontSize: '0.75rem' } }}
+            slotProps={{ htmlInput: { readOnly: true, style: { fontFamily: 'monospace', fontSize: '0.75rem' } } }}
             sx={{ mt: 1 }}
           />
         ) : (
@@ -76,7 +76,7 @@ export default function ImportExportDialog({ open, mode, exportCode, gemById, on
               multiline
               minRows={3}
               placeholder="Paste import code here…"
-              inputProps={{ style: { fontFamily: 'monospace', fontSize: '0.75rem' } }}
+              slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontSize: '0.75rem' } } }}
             />
             {error && (
               <Alert severity="error" sx={{ mt: 1 }}>

@@ -38,7 +38,7 @@ export default function RenameTabDialog({ open, currentName, onSave, onClose }: 
             fullWidth
             value={name}
             onChange={(e) => setName(e.target.value)}
-            inputProps={{ maxLength: MAX_TAB_NAME_LENGTH }}
+            slotProps={{ htmlInput: { maxLength: MAX_TAB_NAME_LENGTH } }}
             helperText={`${name.length}/${MAX_TAB_NAME_LENGTH}`}
             sx={{ mt: 1 }}
           />
