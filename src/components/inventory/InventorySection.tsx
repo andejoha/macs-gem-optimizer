@@ -22,7 +22,7 @@ interface InventorySectionProps {
 
 export default function InventorySection({ gemPower, onGemPowerChange, stacks, onStacksChange }: InventorySectionProps) {
   const { gems } = useGemData();
-  const gemOrder = useMemo(() => new Map(gems.map((g, i) => [g.id, i])), [gems]);
+  const gemOrder = useMemo(() => new Map(gems.map((g) => [g.id, g.sort_priority])), [gems]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [gpAlert, setGpAlert] = useState<{ delta: number } | null>(null);

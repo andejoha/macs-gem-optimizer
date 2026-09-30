@@ -16,7 +16,13 @@ function buildGemInfo(): GemInfo[] {
     gemDef.bonusGemIds.forEach((requiredGemId, socketIndex) => {
       if (requiredGemId) bonusSockets.push({ unlock_rank: unlockRanks[socketIndex], required_gem_id: requiredGemId });
     });
-    gems.push({ id: gemDef.id, name: gemDef.name, star_rating: gemDef.starRating as 1 | 2 | 5, bonus_gems: bonusSockets });
+    gems.push({
+      id: gemDef.id,
+      name: gemDef.name,
+      star_rating: gemDef.starRating as 1 | 2 | 5,
+      bonus_gems: bonusSockets,
+      sort_priority: gemDef.sortPriority,
+    });
   }
   return gems;
 }

@@ -14,6 +14,8 @@ export interface GemDef {
   starRating: number;
   /** IDs of gems required for each bonus socket, in socket order. */
   bonusGemIds: number[];
+  /** Sort order used to display this gem relative to others of the same star rating. */
+  sortPriority: number;
 }
 
 /** One rank-level row from a gem upgrade cost table. */

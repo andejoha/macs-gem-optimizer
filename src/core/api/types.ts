@@ -175,4 +175,5 @@ export interface GemInfo {
   name: string;
   star_rating: 1 | 2 | 5;
   bonus_gems: BonusSocket[];
+  sort_priority: number;
 }

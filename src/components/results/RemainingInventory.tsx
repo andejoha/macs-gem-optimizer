@@ -13,7 +13,7 @@ interface Props {
 
 export default function RemainingInventory({ items, dormantGems = [] }: Props) {
   const { gems } = useGemData();
-  const gemOrder = new Map(gems.map((g, i) => [g.id, i]));
+  const gemOrder = new Map(gems.map((g) => [g.id, g.sort_priority]));
 
   // Build a set of "gem_id|rank|active_stars" keys for dormant gems so we can
   // mark matching stacks as dormant (renders greyscale in InventoryGrid).
