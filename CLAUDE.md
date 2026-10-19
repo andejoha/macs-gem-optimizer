@@ -58,7 +58,8 @@ graph doesn't land in the main bundle chunk).
 1. **Greedy assignment** (`solveAssignment` in `optimizer.ts`) — closest-fit heuristic assigning
    each inventory gem copy to the 5-star main gem socket whose remaining cost it best matches.
 2. **Empty socket fill** (`fillEmptySockets`) — fills any sockets the greedy pass left empty
-   (including all 1/2-star main gem sockets, which start empty), highest-resonance gem first.
+   (including all 1/2-star main gem sockets, which start empty) with the gem that forfeits the least
+   recoverable dormant power, highest resonance first among those.
 3. **Socket materialization** (`assignSockets`) — distributes each main gem's already-decided set
    of copies across its own sockets to maximize activated bonuses, without changing which copies
    were assigned to that main gem.

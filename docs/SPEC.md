@@ -103,6 +103,11 @@ the power pool, and it does not affect whether a plan is feasible. It is purely 
 gem's total resonance sums a base value from the gem's own rank plus a bonus contributed by each of
 its sockets.
 
+Resonance never outranks gem power. When filling a socket that adds no needed power (its main gem's
+requirement is already covered, or it belongs to a 1-star or 2-star main gem), the optimizer picks
+the copy that forfeits the least recoverable dormant power (§2), and only among those the one with
+the highest resonance bonus. It never gives up dormant power for resonance.
+
 ### Base resonance
 
 The base resonance of an equipped gem depends on its own star tier, rank, and (for 5-star gems only)
@@ -186,7 +191,7 @@ Bonus activation is also an optional, player-chosen strategy — a third setting
   socket. Either way, the "Suggested Upgrades" comparison reflects the plan's final state, including
   any budget swaps, not the upgrade search's result in isolation.
 - **`forced`** — instead of a post-pass, this changes _selection_ inside the optimizer itself: at
-  every pick the optimizer makes (both the closest-fit and highest-resonance passes), it restricts
+  every pick the optimizer makes (both the closest-fit and empty-socket fill passes), it restricts
   the candidate pool to copies that would activate the socket's requirement, whenever at least one
   such copy is currently available — falling back to the full pool only once none remain. Unlike
   `budget`, this can select a much worse power fit or a much lower-resonance gem purely to chase a

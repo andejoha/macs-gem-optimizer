@@ -31,8 +31,10 @@ Only **5-star** main gems participate (1/2-star sockets start empty; stage 2 han
 ### Stage 2 — Fill empty sockets
 
 Fills sockets still empty after stage 1, including all 1/2-star main gem sockets. Per main gem,
-per socket type, picks the highest-resonance remaining compatible copy (not closest-GP-match — that
-only happens in stage 1). Same bonus tie-break as stage 1, applied to resonance ties.
+per socket type, picks the remaining compatible copy with the least recoverable dormant power (an
+R1 forfeits nothing), then the highest resonance (not closest-GP-match — that only happens in stage
+1). These sockets add no needed GP, so stage 2 never gives up dormant power for resonance. Same
+bonus tie-break as stage 1, applied to numeric ties.
 
 ### Stage 3 — Socket materialization
 

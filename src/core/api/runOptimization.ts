@@ -181,6 +181,17 @@ function buildDisplayInventory(
   return displayInventory;
 }
 
+/** Returns the copy ids of every inventory copy occupying a socket. */
+function collectAssignedCopyIds(gemAssignments: ReadonlyMap<string, readonly SocketAssignment[]>): Set<number> {
+  const assignedCopyIds = new Set<number>();
+  for (const assignments of gemAssignments.values()) {
+    for (const assignment of assignments) {
+      if (assignment.copyId >= 0) assignedCopyIds.add(assignment.copyId);
+    }
+  }
+  return assignedCopyIds;
+}
+
 /** Everything `deriveFromBags` needs that stays constant across every trial (the base pipeline call, every upgrade depth candidate, every budget swap trial). */
 interface DerivationContext {
   mainGems: readonly MainGem[];
@@ -224,13 +235,7 @@ function deriveFromBags(ctx: DerivationContext, perSlotGems: ReadonlyMap<string,
   const upgradeCost = filtered.reduce((sum, delta) => sum + delta.additionalGemPower, 0);
   const effectiveResidual = result.totalResidualCost + upgradeCost;
 
-  const assignedCopyIds = new Set<number>();
-  for (const assignments of result.gemAssignments.values()) {
-    for (const assignment of assignments) {
-      if (assignment.copyId >= 0) assignedCopyIds.add(assignment.copyId);
-    }
-  }
-
+  const assignedCopyIds = collectAssignedCopyIds(result.gemAssignments);
   const displayInventory = buildDisplayInventory(ctx.working, droppedOps, gemsToRestore, assignedCopyIds);
   const dormantPower = sumDormantPower(displayInventory, assignedCopyIds);
   const surplus = result.availablePower + dormantPower - effectiveResidual;
@@ -419,13 +424,17 @@ export function runOptimization(
       });
       firstPipelineRun = false;
       const relevant = fiveStarAssignments(result.gemAssignments);
-      const { filtered } = filterUpgradesToSocketed(appliedDeltas, relevant, result.gemAssignments);
+      const { filtered, droppedOps, gemsToRestore } = filterUpgradesToSocketed(appliedDeltas, relevant, result.gemAssignments);
       const upgradeCost = filtered.reduce((sum, delta) => sum + delta.additionalGemPower, 0);
       const effectiveResidual = result.totalResidualCost + upgradeCost;
       // Net residual credits the gem power recoverable by making
       // unsocketed gems dormant. Used to decide when to stop the search;
       // effectiveResidual (gross) is what's displayed to the player.
-      netResidual = effectiveResidual - result.totalDormantPower;
+      // Dormant power is counted over the display inventory, where dropped
+      // upgrades are reverted, exactly as the final response reports it.
+      const assignedCopyIds = collectAssignedCopyIds(result.gemAssignments);
+      const displayInventory = buildDisplayInventory(working, droppedOps, gemsToRestore, assignedCopyIds);
+      netResidual = effectiveResidual - sumDormantPower(displayInventory, assignedCopyIds);
 
       // Collapse all non-socketed two-star chains to depth 0 immediately:
       // a non-socketed chain at depth > 0 has its cost refunded but its

@@ -9,7 +9,8 @@
  * 1. Greedy assignment (solveAssignment): Assigns inventory gem copies to
  *    main-gem sockets using a closest-fit heuristic.
  * 2. Fill empty sockets (fillEmptySockets): Fills sockets left empty by the
- *    greedy phase with resonance-maximising gems.
+ *    greedy phase with the gems that forfeit the least recoverable dormant
+ *    power, highest resonance first among those.
  * 3. Socket materialization (assignSockets): Distributes each main gem's
  *    already-decided set of copies across its own sockets to maximize
  *    activated bonuses, without changing which copies were assigned.
@@ -29,7 +30,8 @@
 import { SOCKET_STAR_TYPE } from './constants';
 import type { InventoryGem, MainGem, SocketAssignment } from './models';
 import { makeSocketAssignment } from './models';
-import { computeSocketResonanceBonus } from './rules';
+import { COST_TABLES } from './data';
+import { computeExtractablePower, computeSocketResonanceBonus } from './rules';
 import { compareTuples } from './util/tupleCompare';
 
 /** One physical gem copy paired with its unique copy id. */
@@ -155,8 +157,8 @@ function restrictToBonusActivating(candidates: readonly CopyEntry[], unclaimed: 
  * exact signature, so every numeric field of the result stays governed by
  * `primaryKey` alone -- only which specific gem id lands in the socket can
  * change. This distinction matters for `fillEmptySockets`, whose
- * `primaryKey` ranks by resonance: resonance truncates rank, so e.g. 5-star
- * ranks 6, 6.1, ... 6.11 all tie on resonance despite having different
+ * `primaryKey` ranks partly by resonance: resonance truncates rank, so e.g.
+ * 5-star ranks 6, 6.1, ... 6.11 all tie on resonance despite having different
  * contribution and extractable power. A resonance tie is not necessarily a
  * signature tie.
  *
@@ -302,11 +304,13 @@ export function solveAssignment(
 // ---------------------------------------------------------------------------
 
 /**
- * Fills sockets left empty by the greedy phase with the highest-resonance
- * compatible gem, per main gem, per accepted star type. On a numeric tie,
- * prefers a copy that activates that main gem's bonus, else one not still
- * needed as a bonus gem elsewhere. `forced` selects bonus mode 'forced' (see
- * `pickWithBonusTieBreak`).
+ * Fills sockets left empty by the greedy phase, per main gem, per accepted
+ * star type, with the compatible gem that forfeits the least recoverable
+ * dormant power, then the highest-resonance one. Sockets filled here add no
+ * needed gem power, so they never give up dormant power for resonance. On a
+ * numeric tie, prefers a copy that activates that main gem's bonus, else one
+ * not still needed as a bonus gem elsewhere. `forced` selects bonus mode
+ * 'forced' (see `pickWithBonusTieBreak`).
  */
 export function fillEmptySockets(
   mainGems: readonly MainGem[],
@@ -354,7 +358,11 @@ export function fillEmptySockets(
         const outstanding = outstandingBonusDemand(current, totalDemand);
         const chosen = pickWithBonusTieBreak(
           compatible,
-          ([copyId, gem]) => [-computeSocketResonanceBonus(gem.starRating, gem.activeStars, gem.rank), copyId],
+          ([copyId, gem]) => [
+            computeExtractablePower(gem.rank, COST_TABLES.get(gem.starRating)!),
+            -computeSocketResonanceBonus(gem.starRating, gem.activeStars, gem.rank),
+            copyId,
+          ],
           unclaimed,
           outstanding,
           forced,
