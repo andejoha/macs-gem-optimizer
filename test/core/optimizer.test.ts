@@ -5,8 +5,9 @@
  *
  * In bonus mode 'off' (the default, and what every test below exercises
  * unless noted), bonus activation is a tie-break, never a priority: the
- * optimizer picks a gem by its normal power-fit/resonance criterion, and
- * only when several candidates are numerically indistinguishable (identical
+ * optimizer picks a gem by its normal power-fit/dormant-power/resonance
+ * criterion, and only when several candidates are numerically
+ * indistinguishable (identical
  * contribution and activeStars) does it prefer one that activates a bonus,
  * then one not still needed as a bonus gem by another main gem. See
  * docs/SPEC.md ("Bonus activation"). Bonus mode 'forced' changes this --
@@ -147,27 +148,63 @@ describe('fillEmptySockets -- bonus tie-break', () => {
     expect(bagGemIds(bags, 'ring')).toEqual([7002]);
   });
 
-  it('a resonance tie is not a numeric tie -- contribution still decides, never the bonus', () => {
+  it('a resonance tie is not a numeric tie -- dormant power still decides, never the bonus', () => {
     // Ranks "7" and "7.5" truncate to the same resonance bonus (2 x 7 = 14)
-    // but have different contribution (291 vs 386), so they never enter the
-    // same tie-break pool. The higher-contribution, non-bonus copy (given
-    // the lower copyId, matching today's stable-sort tie-break) must win.
-    // Rank "5" leaves exactly one 2-star socket unlocked, so only one of
-    // the two candidates below can be placed.
+    // but have different contribution (291 vs 386) and recoverable dormant
+    // power, so they never enter the same tie-break pool. The copy that
+    // forfeits less dormant power must win even though the other one
+    // activates the bonus. Rank "5" leaves exactly one 2-star socket
+    // unlocked, so only one of the two candidates below can be placed.
     const mg = main('ring', 2001, 2, '5');
     const bonusTable = bonusMap({ 2001: [0, 7002] });
-    const higherContribution = inv(7001, 2, '7.5'); // contribution 386, no bonus, copyId 0
-    const bonusMatch = inv(7002, 2, '7'); // contribution 291, activates the bonus, copyId 1
+    const lowerDormantPower = inv(7001, 2, '7'); // contribution 291, no bonus
+    const bonusMatch = inv(7002, 2, '7.5'); // contribution 386, activates the bonus
     const demand = computeBonusGemDemand([mg], bonusTable);
     const allCopies: CopyEntry[] = [
-      [0, higherContribution],
-      [1, bonusMatch],
+      [0, bonusMatch],
+      [1, lowerDormantPower],
     ];
     const empty = new Map<string, CopyEntry[]>([['ring', []]]);
 
     const bags = fillEmptySockets([mg], empty, bonusTable, allCopies, demand);
 
     expect(bagGemIds(bags, 'ring')).toEqual([7001]);
+  });
+});
+
+describe('fillEmptySockets -- dormant power', () => {
+  it('prefers a copy that forfeits no dormant power over a higher-resonance upgraded copy', () => {
+    const mg = main('ring', 2001, 2, '5'); // one 2-star socket
+    const bonusTable = bonusMap({ 2001: [0, 7099] }); // requirement matches neither candidate
+    const upgraded = inv(7001, 2, '6.2'); // higher resonance, recoverable dormant power > 0
+    const rankOne = inv(7002, 2, '1'); // lower resonance, rank 1 forfeits nothing
+    const demand = computeBonusGemDemand([mg], bonusTable);
+    const allCopies: CopyEntry[] = [
+      [0, upgraded],
+      [1, rankOne],
+    ];
+    const empty = new Map<string, CopyEntry[]>([['ring', []]]);
+
+    const bags = fillEmptySockets([mg], empty, bonusTable, allCopies, demand);
+
+    expect(bagGemIds(bags, 'ring')).toEqual([7002]);
+  });
+
+  it('breaks a dormant power tie by highest resonance', () => {
+    const mg = main('head', 5001, 5, '6'); // one 5-star socket (index 3)
+    const bonusTable = bonusMap({ 5001: [0, 0, 0, 9099, 0] });
+    const lowerResonance = inv(9001, 5, '1', 4); // socket resonance 10
+    const higherResonance = inv(9002, 5, '1', 5); // socket resonance 11, fully awakened
+    const demand = computeBonusGemDemand([mg], bonusTable);
+    const allCopies: CopyEntry[] = [
+      [0, lowerResonance],
+      [1, higherResonance],
+    ];
+    const empty = new Map<string, CopyEntry[]>([['head', []]]);
+
+    const bags = fillEmptySockets([mg], empty, bonusTable, allCopies, demand);
+
+    expect(bagGemIds(bags, 'head')).toEqual([9002]);
   });
 });
 
@@ -195,21 +232,23 @@ describe('forced bonus mode', () => {
     expect(bagGemIds(bags, 'head')).toEqual([9001]);
   });
 
-  it('fillEmptySockets always prefers a bonus-activating copy over higher resonance', () => {
+  it('fillEmptySockets always prefers a bonus-activating copy over one that forfeits less dormant power', () => {
     const mg = main('ring', 2001, 2, '5'); // one 2-star socket
     const bonusTable = bonusMap({ 2001: [0, 7002] });
-    const higherResonance = inv(7001, 2, '7.5'); // resonance 14, no bonus
-    const bonusMatch = inv(7002, 2, '3'); // lower resonance, activates the bonus
+    const rankOne = inv(7001, 2, '1'); // forfeits no dormant power, no bonus
+    const bonusMatch = inv(7002, 2, '3'); // forfeits dormant power, activates the bonus
     const demand = computeBonusGemDemand([mg], bonusTable);
     const allCopies: CopyEntry[] = [
-      [0, higherResonance],
+      [0, rankOne],
       [1, bonusMatch],
     ];
     const empty = new Map<string, CopyEntry[]>([['ring', []]]);
 
-    const bags = fillEmptySockets([mg], empty, bonusTable, allCopies, demand, true);
+    const ordinary = fillEmptySockets([mg], empty, bonusTable, allCopies, demand);
+    const forced = fillEmptySockets([mg], empty, bonusTable, allCopies, demand, true);
 
-    expect(bagGemIds(bags, 'ring')).toEqual([7002]);
+    expect(bagGemIds(ordinary, 'ring')).toEqual([7001]);
+    expect(bagGemIds(forced, 'ring')).toEqual([7002]);
   });
 });
 

@@ -18,7 +18,7 @@ Never spends gem power or resonance on a bonus, never moves a copy between main 
 ## Forced mode
 
 A pre-filter on the candidate pool, applied inside `solveAssignment` and `fillEmptySockets` before
-the normal closest-fit/highest-resonance argmin: at every pick, restrict the pool to copies that
+the normal closest-fit/empty-socket fill argmin: at every pick, restrict the pool to copies that
 would activate the target main gem's still-unsatisfied requirement, falling back to the full pool
 only when no such copy is currently available (i.e. not already spent by an earlier pick). This
 gives up the feasibility guarantee — it can pick a far worse gem than `off` would, purely to chase a
