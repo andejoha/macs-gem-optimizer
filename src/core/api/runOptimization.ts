@@ -269,13 +269,30 @@ function finalizeResponse(
 
   if (bonusMode === 'budget') {
     progress.report('bonus_budget', 'running', { detail: 'Activating gem bonuses...' });
-    const evaluate: BudgetEvaluator = (bags) => {
-      const trial = deriveFromBags(ctx, bags);
-      return { result: trial.result, surplus: trial.surplus, bonuses: trial.bonuses };
-    };
-    const initialEvaluation: BudgetEvaluation = { result: derived.result, surplus: derived.surplus, bonuses: derived.bonuses };
-    const winner = budgetActivateBonuses(ctx.mainGems, ctx.bonusTable, expandInventory(ctx.working), initialEvaluation, evaluate);
-    derived = deriveFromBags(ctx, bagsFromAssignments(winner.result));
+    // Dropping an upgrade frees its spare copies, which only become socket
+    // candidates once the display inventory replaces the working one. Repeat
+    // the pass on that inventory until a round activates no further bonus.
+    let roundCtx = ctx;
+    for (;;) {
+      const evaluate: BudgetEvaluator = (bags) => {
+        const trial = deriveFromBags(roundCtx, bags);
+        return { result: trial.result, surplus: trial.surplus, bonuses: trial.bonuses };
+      };
+      const initialEvaluation: BudgetEvaluation = { result: derived.result, surplus: derived.surplus, bonuses: derived.bonuses };
+      const winner = budgetActivateBonuses(
+        roundCtx.mainGems,
+        roundCtx.bonusTable,
+        expandInventory(roundCtx.working),
+        initialEvaluation,
+        evaluate,
+      );
+      const next = deriveFromBags(roundCtx, bagsFromAssignments(winner.result));
+      const improved = next.bonuses > derived.bonuses;
+      derived = next;
+      if (!improved) break;
+      roundCtx = { ...roundCtx, working: derived.displayInventory, appliedDeltas: derived.filtered };
+      derived = deriveFromBags(roundCtx, bagsFromAssignments(derived.result));
+    }
   }
 
   const upgradeResult: UpgradeOptimizationResult | null =

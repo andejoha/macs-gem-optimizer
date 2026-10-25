@@ -188,7 +188,8 @@ Bonus activation is also an optional, player-chosen strategy — a third setting
   upgrade's cost is refunded (§4's "kept only if socketed in a five-star main gem" rule re-applies
   after the swap, not before). Whether its spare copies are also recovered follows the same §4 rule:
   only if the displaced gem ends up fully dormant, not if the swap moved it into a different main gem's
-  socket. Either way, the "Suggested Upgrades" comparison reflects the plan's final state, including
+  socket. Spare copies recovered that way are available to the pass again: it repeats until a full
+  pass activates no further bonus. Either way, the "Suggested Upgrades" comparison reflects the plan's final state, including
   any budget swaps, not the upgrade search's result in isolation.
 - **`forced`** — instead of a post-pass, this changes _selection_ inside the optimizer itself: at
   every pick the optimizer makes (both the closest-fit and empty-socket fill passes), it restricts
