@@ -216,7 +216,8 @@ const GEM_LIST: readonly GemDef[] = [
   { id: 2033, name: 'Baneboil', starRating: 2, bonusGemIds: [1028, 2029, 2028], sortPriority: 33 },
   { id: 2034, name: 'The Jolted Eye', starRating: 2, bonusGemIds: [1012, 2004, 2010], sortPriority: 34 },
   { id: 2035, name: 'Seething Polestar', starRating: 2, bonusGemIds: [1024, 2025, 2029], sortPriority: 35 },
-  { id: 2036, name: 'Prong Crag', starRating: 2, bonusGemIds: [1025, 2031, 2029], sortPriority: 36 },
+  { id: 2036, name: 'Prong Crag', starRating: 2, bonusGemIds: [1025, 2031, 2029], sortPriority: 37 },
+  { id: 2037, name: 'Necroplasmic Totem', starRating: 2, bonusGemIds: [1016, 2026, 2028], sortPriority: 36 },
   // ----- 1-star gems -----
   { id: 1001, name: 'The Black Rose', starRating: 1, bonusGemIds: [1009, 1010], sortPriority: 1 },
   { id: 1002, name: 'Nightmare Wreath', starRating: 1, bonusGemIds: [1011, 1012], sortPriority: 2 },
