@@ -143,7 +143,7 @@ export default function HomePage() {
       // When upgrades are enabled, dormant gems are re-activated: they enter
       // the inventory as regular copies and their stored GP is spent back into
       // the pool (subtracted).  The pool may go negative if the player's raw
-      // pool is smaller than the total dormant GP — the upgrade walk handles
+      // pool is smaller than the total dormant GP — the upgrade search handles
       // this by finding upgrades that close the resulting gap.
       const dormantGP = stacks.reduce((sum, s) => sum + dormantContribution(s), 0);
       const request: OptimizeRequest = {

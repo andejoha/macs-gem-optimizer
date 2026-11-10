@@ -87,13 +87,14 @@ materialize via `materializeResult`, re-run the upgrade bookkeeping, rebuild the
 so a budget swap that displaces an upgraded gem is accounted for correctly. See docs/SPEC.md ("Bonus
 activation modes") for the full rule.
 
-The upgrade search in `runOptimization` treats two-star and five-star upgrade chains differently:
-two-star chains are fully exhausted before touching any five-star chain, because five-star gems have
-a much higher gem-power-per-upgrade-cost ratio. It walks upgrade depth downward from maximum,
-re-running `runPipeline` at each candidate depth, until it finds a depth combination whose net
-residual (effective residual minus recoverable dormant power) fits within the available power pool.
-That winning candidate's result is used directly for display (after the bonus budget pass, if
-selected).
+The upgrade search (`searchUpgradeDepths` in `src/core/upgradeSearch.ts`, called by
+`runOptimization`) picks one depth per upgrade chain to minimize net residual (effective residual
+minus recoverable dormant power), independent of the player's pool. Ties go to lower five-star upgrade
+cost, then lower total upgrade cost. It runs cyclic coordinate descent from "no upgrades", then a few
+seeded restarts. Each candidate is scored by re-running `runPipeline` on the materialized inventory.
+The search module itself is pure: it only sees a depth vector and a scoring callback. `runOptimization`
+keeps the baseline instead if the winner isn't strictly better. The winning candidate's result is used
+directly for display (after the bonus budget pass, if selected).
 
 Other core modules:
 

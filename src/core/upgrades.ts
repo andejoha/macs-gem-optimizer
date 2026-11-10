@@ -6,9 +6,9 @@
  *
  * In `buildUpgradeChains`, `groups` (keyed by gem id and star rating) is a
  * Map populated in inventory-scan order. That order determines the order
- * of the returned `chains` array, which in turn determines which chain the
- * caller's downgrade walk peels first -- so it must stay a Map, not a
- * plain object, to preserve insertion order.
+ * of the returned `chains` array, which in turn sets the order in which
+ * the upgrade search sweeps chains -- so it must stay a Map, not a plain
+ * object, to preserve insertion order.
  */
 
 import { SOCKET_STAR_TYPE } from './constants';

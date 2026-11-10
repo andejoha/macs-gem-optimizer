@@ -1,19 +1,24 @@
 /**
- * End-to-end coverage for bonus mode 'budget' combined with upgrades: a
- * bonus activation freed by the budget pass dropping an upgrade must still
- * be found by the same run. See `bonusBudget.test.ts` for the pass in
+ * End-to-end coverage for bonus mode 'budget' combined with upgrades: once
+ * a budget round drops an upgrade, the pass must repeat on the inventory
+ * that results, so a bonus that only becomes affordable then is still
+ * activated by the same run. See `bonusBudget.test.ts` for the pass in
  * isolation.
  */
 
 import { describe, expect, it } from 'vitest';
 import { runOptimization } from '../../../src/core/api/runOptimization';
-import type { GemSetup, InventoryItem, OptimizeRequest } from '../../../src/core/api/types';
+import type { GemSetup, InventoryItem, OptimizeRequest, OptimizeResponse } from '../../../src/core/api/types';
 import { dormantContribution } from '../../../src/utils/gemPowerCost';
 
-const CUTTHROATS_GRIN = 2007;
-const ROILING_CONSEQUENCE_SLOT = 'head';
-/** Index of the Roiling Consequence socket that requires Cutthroat's Grin. */
-const GRIN_SOCKET_INDEX = 1;
+const IRONBANE = 2014;
+const COLOSSUS_ENGINE_SLOT = 'main_hand';
+/** Index of the Colossus Engine socket that requires Ironbane. */
+const IRONBANE_SOCKET_INDEX = 2;
+/** The upgrade the first budget round drops. */
+const DROPPED_UPGRADE_GEM_ID = 2032;
+/** The player's gem power, before the power stored in dormant gems is spent back into the pool. */
+const PLAYER_GEM_POWER = 1400;
 
 const GEM_SETUP: GemSetup = {
   head: { gem_id: 5018, target_rank: '6', active_stars: 4 },
@@ -139,16 +144,30 @@ function buildRequest(): OptimizeRequest {
       dormant: stack.dormant,
     })),
   );
-  return { gem_power: 984 - dormantPower, gem_setup: GEM_SETUP, inventory };
+  return { gem_power: PLAYER_GEM_POWER - dormantPower, gem_setup: GEM_SETUP, inventory };
 }
 
 describe('runOptimization: bonus mode budget with upgrades', () => {
-  it("sockets a spare Cutthroat's Grin once the budget pass has dropped its upgrade", () => {
+  it('activates Ironbane in a later budget round, after an earlier round dropped an upgrade', () => {
     const response = runOptimization(buildRequest(), true, true, 'budget');
 
-    const socket = response.gem_results[ROILING_CONSEQUENCE_SLOT]?.sockets[GRIN_SOCKET_INDEX];
-    expect(socket?.assigned_gem_id).toBe(CUTTHROATS_GRIN);
+    const socket = response.gem_results[COLOSSUS_ENGINE_SLOT]?.sockets[IRONBANE_SOCKET_INDEX];
+    expect(socket?.assigned_gem_id).toBe(IRONBANE);
     expect(socket?.bonus_activated).toBe(true);
+    expect(response.upgrades?.upgrades_applied.map((upgrade) => upgrade.gem_id)).not.toContain(DROPPED_UPGRADE_GEM_ID);
     expect(response.summary.surplus_or_shortfall).toBeGreaterThanOrEqual(0);
   });
+
+  it('spends the surplus upgrades free up on more bonuses, even if less surplus is left than without upgrades', () => {
+    const request = { ...buildRequest(), gem_power: -1000 };
+    const activatedBonuses = (response: OptimizeResponse) =>
+      Object.values(response.gem_results).reduce((sum, gemResult) => sum + (gemResult?.bonuses_activated ?? 0), 0);
+
+    const withUpgrades = runOptimization(request, true, false, 'budget');
+    const withoutUpgrades = runOptimization(request, false, false, 'budget');
+
+    expect(activatedBonuses(withUpgrades)).toBeGreaterThan(activatedBonuses(withoutUpgrades));
+    expect(withUpgrades.summary.surplus_or_shortfall).toBeLessThan(withoutUpgrades.summary.surplus_or_shortfall);
+    expect(withUpgrades.summary.surplus_or_shortfall).toBeGreaterThanOrEqual(0);
+  }, 30_000);
 });
