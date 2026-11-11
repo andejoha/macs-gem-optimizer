@@ -39,12 +39,14 @@ export interface InventoryGem {
   contribution: number;
   /** Whether this copy was marked dormant by the player before this request. */
   dormant?: boolean;
+  /** Whether the player locked this copy: it is never upgraded, sacrificed for an upgrade, or converted. */
+  locked?: boolean;
 }
 
 export function makeInventoryGem(
-  partial: Omit<InventoryGem, 'contribution' | 'dormant'> & { contribution?: number; dormant?: boolean },
+  partial: Omit<InventoryGem, 'contribution' | 'dormant' | 'locked'> & { contribution?: number; dormant?: boolean; locked?: boolean },
 ): InventoryGem {
-  return { contribution: 0, dormant: false, ...partial };
+  return { contribution: 0, dormant: false, locked: false, ...partial };
 }
 
 /**

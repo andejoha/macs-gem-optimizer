@@ -4,7 +4,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
 import type { InventoryGemStack } from '../../types/inventory';
 import { getGemImageUrl } from '../../utils/gearAssets';
-import { inventoryEmptyBg, inventoryFilledBg } from '../../utils/inventoryAssets';
+import { inventoryEmptyBg, inventoryFilledBg, inventoryLockedIcon } from '../../utils/inventoryAssets';
 import { parseRank, getMaxSubRank, subRankToPercent } from '../../utils/rankUtils';
 
 interface InventoryTileProps {
@@ -65,6 +65,13 @@ export default memo(function InventoryTile({ stack, onTileClick, onEmptyClick }:
                 ...(stack.dormant && { filter: 'grayscale(1)' }),
               }}
             />
+            {stack.locked && (
+              <Box
+                component="img"
+                src={inventoryLockedIcon}
+                sx={{ position: 'absolute', top: 6, right: 8, width: '22%', pointerEvents: 'none' }}
+              />
+            )}
             {pctLabel && (
               <Typography
                 sx={{

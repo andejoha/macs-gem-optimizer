@@ -9,10 +9,12 @@ export interface InventoryGemStack {
   active_stars: number;
   quantity: number;
   dormant?: boolean;
+  /** Locked gems are never upgraded, sacrificed for an upgrade, or converted to gem power. */
+  locked?: boolean;
 }
 
-export function inventoryStackKey(item: Pick<InventoryGemStack, 'gem_id' | 'rank' | 'active_stars' | 'dormant'>): string {
-  return `${item.gem_id}|${item.rank}|${item.active_stars}|${item.dormant ? 1 : 0}`;
+export function inventoryStackKey(item: Pick<InventoryGemStack, 'gem_id' | 'rank' | 'active_stars' | 'dormant' | 'locked'>): string {
+  return `${item.gem_id}|${item.rank}|${item.active_stars}|${item.dormant ? 1 : 0}|${item.locked ? 1 : 0}`;
 }
 
 /**
@@ -45,6 +47,7 @@ export function stacksToInventoryItems(stacks: InventoryGemStack[]): InventoryIt
         gem_id: stack.gem_id,
         rank: stack.rank,
         active_stars: stack.active_stars,
+        locked: !!stack.locked,
       })),
     );
 }
@@ -59,6 +62,7 @@ export function allStacksToInventoryItems(stacks: InventoryGemStack[]): Inventor
       rank: stack.rank,
       active_stars: stack.active_stars,
       dormant: !!stack.dormant,
+      locked: !!stack.locked,
     })),
   );
 }
@@ -78,6 +82,7 @@ export function remainingItemsToStacks(items: RemainingInventoryItem[]): Invento
         rank: item.rank,
         active_stars: item.active_stars,
         quantity: 1,
+        locked: item.locked,
       });
     }
   }

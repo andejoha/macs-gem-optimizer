@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { InventoryGemStack } from '../../src/types/inventory';
-import { splitStacksAboveRankOne, sourceStackId } from '../../src/types/inventory';
+import { inventoryStackKey, splitStacksAboveRankOne, sourceStackId, allStacksToInventoryItems } from '../../src/types/inventory';
 
 // Rank "4" is above rank 1 (splittable) by default; individual tests
 // override rank to exercise the rank-1 (always-merged) case.
@@ -69,5 +69,17 @@ describe('sourceStackId', () => {
   it('strips the split suffix to recover the source id', () => {
     expect(sourceStackId('a::0')).toBe('a');
     expect(sourceStackId('a::12')).toBe('a');
+  });
+});
+
+describe('locked stacks', () => {
+  it('have a different stack key than unlocked stacks', () => {
+    const unlocked = stack({ id: 'a', quantity: 1 });
+    expect(inventoryStackKey({ ...unlocked, locked: true })).not.toBe(inventoryStackKey(unlocked));
+  });
+
+  it('pass the lock on to the inventory items sent to the optimizer', () => {
+    const items = allStacksToInventoryItems([stack({ id: 'a', quantity: 2, locked: true })]);
+    expect(items.map((item) => item.locked)).toEqual([true, true]);
   });
 });
