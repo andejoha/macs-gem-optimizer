@@ -222,6 +222,81 @@ function netResidual(derived: DerivedAssignment): number {
 }
 
 /**
+ * Runs the bonus budget pass on `derived` until a round activates no further
+ * bonus. Dropping an upgrade frees its spare copies, which only become socket
+ * candidates once the display inventory replaces the working one, so each
+ * improving round continues on that inventory. Returns the context the final
+ * derivation belongs to.
+ */
+function activateBonusesWithinBudget(
+  ctx: DerivationContext,
+  derived: DerivedAssignment,
+): { ctx: DerivationContext; derived: DerivedAssignment } {
+  let roundCtx = ctx;
+  let current = derived;
+  for (;;) {
+    const evaluate: BudgetEvaluator = (bags) => {
+      const trial = deriveFromBags(roundCtx, bags);
+      return { result: trial.result, surplus: trial.surplus, bonuses: trial.bonuses };
+    };
+    const initialEvaluation: BudgetEvaluation = { result: current.result, surplus: current.surplus, bonuses: current.bonuses };
+    const winner = budgetActivateBonuses(
+      roundCtx.mainGems,
+      roundCtx.bonusTable,
+      expandInventory(roundCtx.working),
+      initialEvaluation,
+      evaluate,
+    );
+    const next = deriveFromBags(roundCtx, bagsFromAssignments(winner.result));
+    const improved = next.bonuses > current.bonuses;
+    current = next;
+    if (!improved) break;
+    roundCtx = { ...roundCtx, working: current.displayInventory, appliedDeltas: current.filtered };
+    current = deriveFromBags(roundCtx, bagsFromAssignments(current.result));
+  }
+  return { ctx: roundCtx, derived: current };
+}
+
+/**
+ * Looks for a socketed upgraded gem that an unsocketed copy of the same star
+ * rating can replace without lowering surplus or activated bonuses. Such an
+ * upgrade only spends gem power the replacement already holds: the budget
+ * pass can leave a dormant gem of that very rank behind. Returns the first
+ * replacement that strictly lowers the upgrade cost (closest fit first), or
+ * null when none does.
+ */
+function pruneRedundantUpgrade(ctx: DerivationContext, derived: DerivedAssignment): DerivedAssignment | null {
+  if (derived.surplus < 0) return null;
+
+  const upgradedKeys = new Set(
+    derived.filtered
+      .filter((delta) => delta.upgradeType !== 'preparation')
+      .map((delta) => `${delta.gemId}:${delta.starRating}:${delta.targetRank}`),
+  );
+  if (upgradedKeys.size === 0) return null;
+
+  const bags = bagsFromAssignments(derived.result);
+  const socketedCopyIds = collectAssignedCopyIds(derived.result.gemAssignments);
+  const unsocketed = expandInventory(ctx.working).filter(([copyId]) => !socketedCopyIds.has(copyId));
+
+  for (const [slotName, bag] of bags) {
+    for (const [copyId, gem] of bag) {
+      if (!upgradedKeys.has(`${gem.gemId}:${gem.starRating}:${gem.rank}`)) continue;
+      const replacements = unsocketed
+        .filter(([, candidate]) => candidate.starRating === gem.starRating && candidate.contribution >= gem.contribution)
+        .sort(([idA, a], [idB, b]) => a.contribution - b.contribution || idA - idB);
+      for (const replacement of replacements) {
+        const trialBags = new Map(bags);
+        trialBags.set(slotName, [...bag.filter(([id]) => id !== copyId), replacement]);
+        const trial = deriveFromBags(ctx, trialBags);
+        if (trial.surplus >= derived.surplus && trial.bonuses >= derived.bonuses && trial.upgradeCost < derived.upgradeCost) return trial;
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Finalizes one candidate per-slot bag assignment into a response: derives
  * the result, runs the bonus budget pass when selected, assembles the
  * upgrades block (when `baseline` is given), and reconciles rank-1
@@ -246,30 +321,15 @@ function finalizeResponse(
 
   if (bonusMode === 'budget') {
     progress.report('bonus_budget', 'running', { detail: 'Activating gem bonuses...' });
-    // Dropping an upgrade frees its spare copies, which only become socket
-    // candidates once the display inventory replaces the working one. Repeat
-    // the pass on that inventory until a round activates no further bonus.
-    let roundCtx = ctx;
+    // Pruning an upgrade frees its spare copies, which can make a further
+    // bonus affordable, so the two steps alternate until no upgrade is pruned.
+    let state = activateBonusesWithinBudget(ctx, derived);
     for (;;) {
-      const evaluate: BudgetEvaluator = (bags) => {
-        const trial = deriveFromBags(roundCtx, bags);
-        return { result: trial.result, surplus: trial.surplus, bonuses: trial.bonuses };
-      };
-      const initialEvaluation: BudgetEvaluation = { result: derived.result, surplus: derived.surplus, bonuses: derived.bonuses };
-      const winner = budgetActivateBonuses(
-        roundCtx.mainGems,
-        roundCtx.bonusTable,
-        expandInventory(roundCtx.working),
-        initialEvaluation,
-        evaluate,
-      );
-      const next = deriveFromBags(roundCtx, bagsFromAssignments(winner.result));
-      const improved = next.bonuses > derived.bonuses;
-      derived = next;
-      if (!improved) break;
-      roundCtx = { ...roundCtx, working: derived.displayInventory, appliedDeltas: derived.filtered };
-      derived = deriveFromBags(roundCtx, bagsFromAssignments(derived.result));
+      const pruned = pruneRedundantUpgrade(state.ctx, state.derived);
+      if (pruned === null) break;
+      state = activateBonusesWithinBudget({ ...state.ctx, working: pruned.displayInventory, appliedDeltas: pruned.filtered }, pruned);
     }
+    derived = state.derived;
   }
 
   const upgradeResult: UpgradeOptimizationResult | null =

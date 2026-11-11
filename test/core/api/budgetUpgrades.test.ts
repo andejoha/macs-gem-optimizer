@@ -10,6 +10,9 @@ import { describe, expect, it } from 'vitest';
 import { runOptimization } from '../../../src/core/api/runOptimization';
 import type { GemSetup, InventoryItem, OptimizeRequest, OptimizeResponse } from '../../../src/core/api/types';
 import { dormantContribution } from '../../../src/utils/gemPowerCost';
+import { GEM_INFO } from '../../../src/core/api/gemData';
+import { allStacksToInventoryItems } from '../../../src/types/inventory';
+import { decodeSetup } from '../../../src/utils/setupCodec';
 
 const IRONBANE = 2014;
 const COLOSSUS_ENGINE_SLOT = 'main_hand';
@@ -169,5 +172,30 @@ describe('runOptimization: bonus mode budget with upgrades', () => {
     expect(activatedBonuses(withUpgrades)).toBeGreaterThan(activatedBonuses(withoutUpgrades));
     expect(withUpgrades.summary.surplus_or_shortfall).toBeLessThan(withoutUpgrades.summary.surplus_or_shortfall);
     expect(withUpgrades.summary.surplus_or_shortfall).toBeGreaterThanOrEqual(0);
+  }, 30_000);
+});
+
+const BANEBOIL = 2033;
+const POWER_AND_COMMAND = 2001;
+
+/** A setup exported from the app: the budget pass makes Power & Command 8.2 dormant. */
+const SHARED_SETUP =
+  'AQDlCAATmloEAROPWgMCE6BIAwMTo1oFBBOfSAQFE6FIAwYTpFoFBxOlWgVNA_8AAQIEAAABAQQBAAECBAIAAQMEAwABBAQEAAEDBAUAAQQEBgABBAfRgAIBB9MAAgUH0zaCAQfTXIIBB9QAAgMH1HGCAQfWAAIBB9cAAgIH2AACFgfYSoIBB9lwAgEH2lsCAQfbAAIDB9uBAgEH3AACBAfeAAIJB98AAhMH32yCAQfgAAIBB-B-ggEH4QACAQfhcIIBB-QAAgIH5QACAQfmfoIBB-cAAg4H5zeCAQfpAAIIB-lIggEH6V4CAQfqAAIPB-pKggEH7AACDgfsN4IBB-0AAgkH7VqCAQfvAAIMB-9LggEH8AACBgfwbIIBB_EAAikH8gACDgf0AAILB_UAAikTiQACAxOJSgIBE4oAAgITiwACAROLSgUBE40AAgMTjgACAxOPAAIBE5EAAgQTkkoDAROVAAIDE5YAAgITlwACAhOYAAICE5kAAgETmgBCAhOdOAMBE54AAgUTnwBCAROgAEICE6EAQgMTojoCAROjAEIHE6QAQgwTpQBCBA';
+
+describe('runOptimization: bonus mode budget prunes redundant upgrades', () => {
+  it('sockets the dormant Power & Command instead of upgrading Baneboil to the same rank', () => {
+    const { gemSetup, gemPower, stacks } = decodeSetup(SHARED_SETUP, new Map(GEM_INFO.map((gem) => [gem.id, gem])));
+    const dormantPower = stacks.reduce((sum, stack) => sum + dormantContribution(stack), 0);
+    const request: OptimizeRequest = {
+      gem_power: gemPower - dormantPower,
+      gem_setup: gemSetup,
+      inventory: allStacksToInventoryItems(stacks),
+    };
+
+    const response = runOptimization(request, true, true, 'budget');
+
+    expect(response.upgrades?.upgrades_applied.map((upgrade) => upgrade.gem_id)).not.toContain(BANEBOIL);
+    expect(response.gem_results.main_hand?.sockets.map((socket) => socket.assigned_gem_id)).toContain(POWER_AND_COMMAND);
+    expect(response.summary.surplus_or_shortfall).toBeGreaterThanOrEqual(0);
   }, 30_000);
 });
