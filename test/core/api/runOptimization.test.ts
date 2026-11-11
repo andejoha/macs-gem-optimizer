@@ -28,7 +28,7 @@ describe('runOptimization: activated_dormant_gems', () => {
     ]);
   });
 
-  it('keeps dormant provenance across the upgrade depth walk', () => {
+  it('keeps dormant provenance across the upgrade search', () => {
     // Only 4 spare rank-"1" copies of the main gem's own type exist, all
     // dormant on input; buildUpgradeChains picks the highest-contribution
     // copy as the chain target and (at whatever depth the search settles
@@ -174,4 +174,17 @@ describe('runOptimization: feasibility with upgrades', () => {
 
     expect(response.summary.status).toBe('feasible');
   });
+
+  it('never leaves less surplus than not upgrading, and draws the same gem power whatever the pool', () => {
+    const poolDraws = [-1337, 5000].map((gemPower) => {
+      const poolRequest = { ...request, gem_power: gemPower };
+      const withUpgrades = runOptimization(poolRequest, true, false, 'off');
+      const withoutUpgrades = runOptimization(poolRequest, false, false, 'off');
+
+      expect(withUpgrades.summary.surplus_or_shortfall).toBeGreaterThanOrEqual(withoutUpgrades.summary.surplus_or_shortfall);
+      return gemPower - withUpgrades.summary.surplus_or_shortfall;
+    });
+
+    expect(poolDraws[1]).toBe(poolDraws[0]);
+  }, 30_000);
 });

@@ -1,8 +1,8 @@
 /**
  * Core orchestration for running the optimizer end to end: parses the
  * request, runs the baseline pipeline, and -- when upgrades are enabled --
- * searches for the most cost-effective set of gem upgrades before producing
- * the final response. When bonus mode 'budget' is selected, a post-pipeline
+ * searches for the upgrade depth combination that leaves the most gem power
+ * (see `upgradeSearch.ts`) before producing the final response. When bonus mode 'budget' is selected, a post-pipeline
  * swap pass (see `bonusBudget.ts`) then spends any remaining surplus
  * activating bonuses, and the upgrade bookkeeping and display inventory are
  * re-derived from its result. See docs/SPEC.md ("Bonus activation modes").
@@ -14,7 +14,8 @@ import { type CopyEntry, expandInventory } from '../optimizer';
 import { materializeResult, runPipeline } from '../pipeline';
 import { nullReporter, type ProgressReporter } from '../progress';
 import { sumDormantPower } from '../rules';
-import { buildUpgradeChains, computeSocketCounts, filterUpgradesToSocketed, materializeUpgrades, type GemUpgradeChain } from '../upgrades';
+import { DEFAULT_UPGRADE_SEARCH_OPTIONS, type DepthScore, searchUpgradeDepths } from '../upgradeSearch';
+import { buildUpgradeChains, computeSocketCounts, filterUpgradesToSocketed, materializeUpgrades } from '../upgrades';
 import { alreadyDormantCounter, domainToResponse, requestToDomain } from './converters';
 import type { ConvertedGemItem, OptimizeRequest, OptimizeResponse, RemainingInventoryItem } from './types';
 import { ValidationError } from './validate';
@@ -103,39 +104,6 @@ function finalizeRankOneConversion(
   };
 }
 
-/** Returns the set of (gemId, starRating, rank) identities currently occupying a socket. */
-function socketedIdentities(gemAssignments: ReadonlyMap<string, readonly { gem: InventoryGem | null }[]>): Set<string> {
-  const identities = new Set<string>();
-  for (const assignments of gemAssignments.values()) {
-    for (const assignment of assignments) {
-      if (assignment.gem !== null) {
-        identities.add(`${assignment.gem.gemId}|${assignment.gem.starRating}|${assignment.gem.rank}`);
-      }
-    }
-  }
-  return identities;
-}
-
-/** Returns the index of the highest-contribution socketed chain at depth > 0, or -1 if none qualify. */
-function findChainToPeel(chains: readonly GemUpgradeChain[], depths: readonly number[], socketedIdentitySet: ReadonlySet<string>): number {
-  let bestIndex = -1;
-  let bestContribution = -1;
-  const len = Math.min(chains.length, depths.length);
-  for (let index = 0; index < len; index++) {
-    const chain = chains[index];
-    const depth = depths[index];
-    if (depth === 0) continue;
-    const identity = `${chain.gemId}|${chain.starRating}|${chain.steps[depth - 1].toRank}`;
-    if (!socketedIdentitySet.has(identity)) continue;
-    const contribution = chain.steps[depth - 1].contributionAfter;
-    if (contribution > bestContribution || (contribution === bestContribution && chain.gemId < chains[bestIndex].gemId)) {
-      bestContribution = contribution;
-      bestIndex = index;
-    }
-  }
-  return bestIndex;
-}
-
 /** Restricts `gemAssignments` to the slots in `fiveStarSlots` -- only those sockets reduce residual cost (see docs/SPEC.md). */
 function restrictToFiveStarSlots(
   gemAssignments: ReadonlyMap<string, SocketAssignment[]>,
@@ -192,7 +160,7 @@ function collectAssignedCopyIds(gemAssignments: ReadonlyMap<string, readonly Soc
   return assignedCopyIds;
 }
 
-/** Everything `deriveFromBags` needs that stays constant across every trial (the base pipeline call, every upgrade depth candidate, every budget swap trial). */
+/** The inputs `deriveFromResult` needs for one candidate: the base pipeline call, an upgrade depth combination, or a budget swap trial. */
 interface DerivationContext {
   mainGems: readonly MainGem[];
   skippedSlots: readonly string[];
@@ -210,26 +178,19 @@ interface DerivedAssignment {
   upgradeCost: number;
   effectiveResidual: number;
   displayInventory: InventoryGem[];
+  /** Gem power recoverable from every copy of the display inventory left unsocketed. */
+  dormantPower: number;
   surplus: number;
   bonuses: number;
 }
 
 /**
- * Derives a full `DerivedAssignment` from a candidate per-slot bag
- * assignment: materializes sockets (phase 3), filters upgrades down to what
- * is actually socketed in a five-star main gem, rebuilds the display
- * inventory, and computes surplus and total activated bonuses exactly as
- * the final response will report them.
- *
- * The upgrade depth walk in `runOptimization` has its own inline loop and
- * does not call this function for each candidate depth; it calls it once,
- * for the winning depth's result. The bonus budget pass calls it once per
- * swap trial.
+ * Derives a full `DerivedAssignment` from an already materialized result:
+ * filters upgrades down to what is actually socketed in a five-star main
+ * gem, rebuilds the display inventory, and computes surplus and total
+ * activated bonuses exactly as the final response will report them.
  */
-function deriveFromBags(ctx: DerivationContext, perSlotGems: ReadonlyMap<string, readonly CopyEntry[]>): DerivedAssignment {
-  const allCopies = expandInventory(ctx.working);
-  const result = materializeResult(ctx.availablePower, ctx.mainGems, ctx.skippedSlots, allCopies, perSlotGems, ctx.bonusTable);
-
+function deriveFromResult(ctx: DerivationContext, result: ReturnType<typeof materializeResult>): DerivedAssignment {
   const relevant = restrictToFiveStarSlots(result.gemAssignments, ctx.fiveStarSlots);
   const { filtered, droppedOps, gemsToRestore } = filterUpgradesToSocketed(ctx.appliedDeltas, relevant, result.gemAssignments);
   const upgradeCost = filtered.reduce((sum, delta) => sum + delta.additionalGemPower, 0);
@@ -241,7 +202,23 @@ function deriveFromBags(ctx: DerivationContext, perSlotGems: ReadonlyMap<string,
   const surplus = result.availablePower + dormantPower - effectiveResidual;
   const bonuses = result.gemResults.reduce((sum, gemResult) => sum + gemResult.bonusesActivated, 0);
 
-  return { result, filtered, upgradeCost, effectiveResidual, displayInventory, surplus, bonuses };
+  return { result, filtered, upgradeCost, effectiveResidual, displayInventory, dormantPower, surplus, bonuses };
+}
+
+/**
+ * Materializes sockets (phase 3) for a candidate per-slot bag assignment,
+ * then derives it as `deriveFromResult` does. The bonus budget pass calls
+ * this once per swap trial.
+ */
+function deriveFromBags(ctx: DerivationContext, perSlotGems: ReadonlyMap<string, readonly CopyEntry[]>): DerivedAssignment {
+  const allCopies = expandInventory(ctx.working);
+  const result = materializeResult(ctx.availablePower, ctx.mainGems, ctx.skippedSlots, allCopies, perSlotGems, ctx.bonusTable);
+  return deriveFromResult(ctx, result);
+}
+
+/** Effective residual minus recoverable dormant power: the gem power a plan draws from the player's pool. */
+function netResidual(derived: DerivedAssignment): number {
+  return derived.effectiveResidual - derived.dormantPower;
 }
 
 /**
@@ -314,8 +291,9 @@ function finalizeResponse(
 /**
  * Runs the optimizer end to end: parses and validates the request, runs
  * the baseline pipeline, and -- when `enableUpgrades` is set -- searches
- * for the most cost-effective combination of gem upgrades before
- * producing the final response. `bonusMode` selects the bonus activation
+ * for the upgrade depth combination that leaves the most gem power, never
+ * settling for less than the plan without upgrades, before producing the
+ * final response. `bonusMode` selects the bonus activation
  * strategy: 'off' (default, tie-break only), 'forced' (biases gem
  * selection inside the pipeline itself), or 'budget' (a post-pipeline swap
  * pass, see `finalizeResponse`). Throws ValidationError if the request has
@@ -380,7 +358,7 @@ export function runOptimization(
   }
 
   // Build upgrade chains (one per socketable gem type) and search for the
-  // most cost-effective combination of upgrade depths.
+  // depth combination that leaves the most gem power.
   const socketCounts = computeSocketCounts(mainGems);
   const { chains, leftover } = buildUpgradeChains(inventory, socketCounts);
 
@@ -399,121 +377,70 @@ export function runOptimization(
 
   progress.report('upgrades', 'running', { detail: 'Evaluating upgrade potential...' });
 
-  // Two-star chains are fully exhausted before touching any five-star
-  // chain: five-star gems have a higher gem-power-per-upgrade-cost ratio
-  // (roughly 0.64 vs 0.26 for two-star), so they're preserved as long as
-  // possible.
-  const twoStarChains = chains.filter((chain) => chain.starRating === 2);
-  const fiveStarChains = chains.filter((chain) => chain.starRating === 5);
-  const allChains = [...twoStarChains, ...fiveStarChains]; // order matters: two-star depths first
-  const fiveStarDepths = fiveStarChains.map((chain) => chain.steps.length);
+  // Two-star chains come first so the search sweeps them before five-star
+  // chains; the five-star preference itself is a tie-break in the search.
+  const allChains = [...chains.filter((chain) => chain.starRating === 2), ...chains.filter((chain) => chain.starRating === 5)];
 
-  interface Candidate {
-    result: ReturnType<typeof runPipeline>;
-    effectiveResidual: number;
-    netResidual: number;
-    working: InventoryGem[];
-    appliedDeltas: UpgradeDelta[];
-  }
-  let bestCandidate: Candidate | null = null;
   let firstPipelineRun = true;
-
-  function fiveStarAssignments(gemAssignments: Map<string, SocketAssignment[]>): Map<string, SocketAssignment[]> {
-    return restrictToFiveStarSlots(gemAssignments, fiveStarSlots);
-  }
-
-  let surplusFound = false;
-  let socketedIdentitySet: Set<string>;
-  let netResidual: number;
-
-  while (!surplusFound) {
-    // Restore two-star chains to their maximum depth for this five-star configuration.
-    const twoStarDepths = twoStarChains.map((chain) => chain.steps.length);
-
-    while (true) {
-      const { working, appliedDeltas } = materializeUpgrades(allChains, [...twoStarDepths, ...fiveStarDepths], leftover);
-      if (!firstPipelineRun) {
-        progress.report('upgrades_rerun', 'running', { detail: 'Re-optimizing with upgrades...' });
-      }
-      const result = runPipeline(availablePower, mainGems, skippedSlots, working, {
-        progress: firstPipelineRun ? progress : nullReporter,
-        bonusMode,
-      });
-      firstPipelineRun = false;
-      const relevant = fiveStarAssignments(result.gemAssignments);
-      const { filtered, droppedOps, gemsToRestore } = filterUpgradesToSocketed(appliedDeltas, relevant, result.gemAssignments);
-      const upgradeCost = filtered.reduce((sum, delta) => sum + delta.additionalGemPower, 0);
-      const effectiveResidual = result.totalResidualCost + upgradeCost;
-      // Net residual credits the gem power recoverable by making
-      // unsocketed gems dormant. Used to decide when to stop the search;
-      // effectiveResidual (gross) is what's displayed to the player.
-      // Dormant power is counted over the display inventory, where dropped
-      // upgrades are reverted, exactly as the final response reports it.
-      const assignedCopyIds = collectAssignedCopyIds(result.gemAssignments);
-      const displayInventory = buildDisplayInventory(working, droppedOps, gemsToRestore, assignedCopyIds);
-      netResidual = effectiveResidual - sumDormantPower(displayInventory, assignedCopyIds);
-
-      // Collapse all non-socketed two-star chains to depth 0 immediately:
-      // a non-socketed chain at depth > 0 has its cost refunded but its
-      // consumed rank-1 spare copies are gone, inflating residual. Restoring
-      // it always improves the effective residual.
-      socketedIdentitySet = socketedIdentities(relevant);
-      const nonSocketedIndices: number[] = [];
-      for (let index = 0; index < twoStarChains.length; index++) {
-        const chain = twoStarChains[index];
-        const depth = twoStarDepths[index];
-        if (depth > 0 && !socketedIdentitySet.has(`${chain.gemId}|${chain.starRating}|${chain.steps[depth - 1].toRank}`)) {
-          nonSocketedIndices.push(index);
-        }
-      }
-      if (nonSocketedIndices.length > 0) {
-        for (const index of nonSocketedIndices) twoStarDepths[index] = 0;
-        continue; // re-evaluate with spare copies restored
-      }
-
-      // All non-socketed chains are at depth 0 -- this is a clean state.
-      if (bestCandidate === null || netResidual < bestCandidate.netResidual) {
-        bestCandidate = { result, effectiveResidual, netResidual, working, appliedDeltas };
-      }
-
-      if (netResidual <= originalAvailablePower) {
-        surplusFound = true;
-        break;
-      }
-
-      const chainToPeel = findChainToPeel(twoStarChains, twoStarDepths, socketedIdentitySet);
-      if (chainToPeel < 0) break; // All two-star at depth 0 -- fall through to peel one five-star chain
-
-      twoStarDepths[chainToPeel] -= 1;
-    }
-
-    if (surplusFound) break;
-
-    // All two-star chains are exhausted for this five-star configuration.
-    // Use the socketed set from the last evaluation to pick which
-    // five-star chain to peel.
-    const chainToPeel = findChainToPeel(fiveStarChains, fiveStarDepths, socketedIdentitySet);
-    if (chainToPeel < 0) break; // no five-star chains left to peel
-
-    fiveStarDepths[chainToPeel] -= 1;
-    // twoStarDepths will be reset to maximum at the top of the outer loop
-  }
-
-  // The search already ran the full pipeline on the winning inventory;
-  // finalizeResponse re-derives the upgrade bookkeeping and display
-  // inventory from it (and applies the bonus budget pass, if selected).
-  const chosen = bestCandidate!;
-  const ctx: DerivationContext = {
-    mainGems,
-    skippedSlots,
-    availablePower,
-    bonusTable: baseline.bonusTable,
-    working: chosen.working,
-    appliedDeltas: chosen.appliedDeltas,
-    fiveStarSlots,
+  /** Runs the pipeline on the inventory one depth combination produces. */
+  const runCandidate = (depths: readonly number[]) => {
+    const { working, appliedDeltas } = materializeUpgrades(allChains, depths, leftover);
+    const result = runPipeline(availablePower, mainGems, skippedSlots, working, {
+      progress: firstPipelineRun ? progress : nullReporter,
+      bonusMode,
+    });
+    firstPipelineRun = false;
+    const ctx: DerivationContext = { ...noUpgradeCtx, working, appliedDeltas };
+    return { ctx, result, derived: deriveFromResult(ctx, result) };
   };
+
+  // The search caches every score, so it only sees the scores; the winner's
+  // pipeline result is rebuilt afterwards.
+  const scoreDepths = (depths: readonly number[]): DepthScore => {
+    const { derived } = runCandidate(depths);
+    return {
+      netResidual: netResidual(derived),
+      fiveStarUpgradeCost: derived.filtered
+        .filter((delta) => delta.starRating === 5)
+        .reduce((sum, delta) => sum + delta.additionalGemPower, 0),
+      upgradeCost: derived.upgradeCost,
+    };
+  };
+
+  const { depths: chosenDepths, score: chosenScore } = searchUpgradeDepths(
+    allChains.map((chain) => chain.steps.length),
+    scoreDepths,
+    {
+      ...DEFAULT_UPGRADE_SEARCH_OPTIONS,
+      onRestart: (index, total) =>
+        progress.report('upgrades_rerun', 'running', {
+          iteration: index,
+          detail: `Searching upgrade combinations (${index} of ${total})...`,
+        }),
+    },
+  );
+
+  // Upgrades must never leave less gem power than not upgrading at all.
+  const baselineNetResidual = netResidual(deriveFromResult(noUpgradeCtx, baseline));
+  if (baselineNetResidual <= chosenScore.netResidual) {
+    return finalizeResponse(
+      noUpgradeCtx,
+      bagsFromAssignments(baseline),
+      baseline,
+      bonusMode,
+      progress,
+      alreadyDormant,
+      originalAvailablePower,
+      rankOneGems,
+    );
+  }
+
+  // finalizeResponse re-derives the upgrade bookkeeping and display
+  // inventory from the winner (and applies the bonus budget pass, if
+  // selected).
+  const chosen = runCandidate(chosenDepths);
   return finalizeResponse(
-    ctx,
+    chosen.ctx,
     bagsFromAssignments(chosen.result),
     baseline,
     bonusMode,

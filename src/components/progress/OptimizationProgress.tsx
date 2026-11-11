@@ -3,8 +3,8 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Typography from '@mui/material/Typography';
 import type { ProgressEvent } from '../../types/progress';
 
-// Keys match the stage names emitted by core/pipeline.ts and
-// core/api/runOptimization.ts exactly.
+// Fallback labels for events without a detail. Keys match the stage names
+// emitted by core/pipeline.ts and core/api/runOptimization.ts exactly.
 const STAGE_LABELS: Record<string, string> = {
   assignment: 'Solving gem assignment...',
   fill_empty: 'Filling empty sockets...',
@@ -18,7 +18,7 @@ interface Props {
 }
 
 export default function OptimizationProgress({ progress }: Props) {
-  const stageLabel = progress ? (STAGE_LABELS[progress.stage] ?? progress.detail ?? 'Optimizing...') : 'Optimizing...';
+  const stageLabel = progress ? (progress.detail ?? STAGE_LABELS[progress.stage] ?? 'Optimizing...') : 'Optimizing...';
 
   return (
     <Box

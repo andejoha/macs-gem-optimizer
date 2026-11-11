@@ -1,6 +1,6 @@
 ---
 name: upgrade-feature
-description: Describes the gem upgrade search (chain construction and depth walk). Use this to cross reference the implementation with the intended behavior of the upgrade feature.
+description: Describes the gem upgrade search (chain construction and depth search). Use this to cross reference the implementation with the intended behavior of the upgrade feature.
 ---
 
 # Gem Upgrade Feature
@@ -28,22 +28,29 @@ or spares run out — it never proposes a step it can't fully fund.
 ## Depth search
 
 A candidate is a chosen depth per chain, materialized into a working inventory and re-run through
-the base assignment to see if the upgrade pays off.
-
-Two-star chains are walked down to their lowest depth before any five-star chain is touched, since
-five-star gems return far more socketed power per GP spent — their upgrade potential is preserved
-as long as possible (`docs/SPEC.md` §4). Depth walks **downward** from maximum, peeling one step at
-a time from the highest-contribution chain whose current result is actually socketed.
+the base assignment to score it (`searchUpgradeDepths` in `src/core/upgradeSearch.ts`, wired up by
+`runOptimization`).
 
 Only upgrades that end up socketed in a 5-star main gem count toward cost. That cost is added to
 the base residual for the gross _effective residual_ shown to the player; recoverable power from
-everything left unsocketed is then subtracted to get a _net residual_, which drives the search. A
-two-star chain left above its lowest depth but unsocketed collapses back immediately and is
-re-evaluated — its cost refunds but its spare copies are gone, so restoring it always helps. The
-search stops as soon as any candidate's net residual fits the player's original power pool, keeping the
-best (lowest net residual) candidate seen — it does not keep searching to confirm that's the global
-best, so a larger pool can stop the search earlier and settle for a worse depth combination than a
-smaller pool would. This non-monotonicity is deliberate.
+everything left unsocketed is then subtracted to get a _net residual_. The search minimizes net
+residual (that is, maximizes surplus), breaking ties by lower five-star upgrade cost, then lower total
+upgrade cost. That tie-break is how two-star material is preferred (`docs/SPEC.md` §4). It never
+outranks surplus. The player's pool plays no part in the search, so the chosen depths are the same
+whatever the pool.
+
+The search is cyclic coordinate descent starting from "no upgrades" (every depth 0): each chain in
+turn is set to its best depth, scanning all of its depths with the other chains fixed, until a full
+sweep changes nothing. Seeded restarts then randomly redraw some chains' depths from the best
+combination so far and descend again, keeping any improvement. Evaluations are cached by depth
+combination and capped, so the result is deterministic. Two-star chains come before five-star chains
+in the sweep order.
+
+`runOptimization` finally compares the winner against the baseline (the no-upgrade pipeline run) and
+keeps the baseline unless the winner has a strictly lower net residual, so enabling upgrades never
+leaves less surplus before the bonus `budget` pass. That pass runs on the chosen plan afterwards and
+may spend the extra surplus on bonuses or drop upgrades, so its final surplus can be lower with
+upgrades than without (see `docs/SPEC.md` §3, "Bonus activation modes").
 
 ## Unwinding dropped upgrades
 

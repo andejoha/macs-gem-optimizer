@@ -229,9 +229,17 @@ returned to the display inventory only if that rank isn't socketed anywhere at a
 ended up socketed in a 1/2-star main gem instead is uncharged but still genuinely in use, so its
 spare copies must not also be shown as available.
 
-Two-star upgrade material should be preferred over five-star upgrade material when a choice exists,
-since five-star gems return substantially more socketed power per unit of gem power spent — five-star
-upgrade potential should be preserved as long as possible before falling back to it.
+Upgrades are chosen to leave the plan with as much surplus gem power (§5) as possible. Upgrade
+selection is independent of the size of the player's pool. Before the optional bonus `budget` pass
+(§3), enabling upgrades must never leave less surplus than the same plan without upgrades. That pass
+then spends surplus on bonuses and may drop selected upgrades, so in bonus mode `budget` the final plan
+can report less surplus with upgrades than without, in exchange for more activated bonuses.
+
+Between choices that leave the same surplus, two-star upgrade material is preferred over five-star
+upgrade material, since five-star gems return substantially more socketed power per unit of gem power
+spent and their upgrade potential is worth preserving. After that, the choice with the lower total
+upgrade cost is preferred. This is only a tie-break: a five-star upgrade that leaves more surplus is
+always chosen.
 
 ## 5. Feasibility
 
