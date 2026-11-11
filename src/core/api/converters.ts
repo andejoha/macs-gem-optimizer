@@ -142,6 +142,7 @@ export function requestToDomain(request: OptimizeRequest): DomainRequest {
         activeStars: inventoryItem.active_stars,
         contribution,
         dormant: !!inventoryItem.dormant,
+        locked: !!inventoryItem.locked,
       }),
     );
   });
@@ -242,6 +243,7 @@ export function domainToResponse(
           assigned_gem_star_rating: gem.starRating,
           assigned_gem_rank: gem.rank,
           assigned_gem_active_stars: gem.activeStars,
+          assigned_gem_locked: !!gem.locked,
           contribution: assignment.contribution,
           bonus_gem_required_id: bonusGemId,
           bonus_activated: assignment.bonusActivated,
@@ -365,6 +367,7 @@ export function domainToResponse(
       rank: gem.rank,
       active_stars: gem.activeStars,
       contribution: gem.contribution,
+      locked: gem.locked,
     });
     const extractablePower = computeExtractablePower(gem.rank, COST_TABLES.get(gem.starRating)!);
     if (extractablePower > 0) {

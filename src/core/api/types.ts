@@ -33,6 +33,8 @@ export interface InventoryItem {
   rank: string;
   active_stars: number;
   dormant?: boolean;
+  /** Excluded from upgrades and rank-1 conversion. */
+  locked?: boolean;
 }
 
 export interface OptimizeRequest {
@@ -53,6 +55,7 @@ export interface SocketResponse {
   assigned_gem_star_rating: number | null;
   assigned_gem_rank: string | null;
   assigned_gem_active_stars: number | null;
+  assigned_gem_locked?: boolean;
   contribution: number | null;
   bonus_gem_required_id: number | null;
   bonus_activated: boolean | null;
@@ -126,6 +129,7 @@ export interface RemainingInventoryItem {
   rank: string;
   active_stars: number;
   contribution: number;
+  locked?: boolean;
 }
 
 export interface ConvertedGemItem {

@@ -158,7 +158,8 @@ export function buildUpgradeChains(
   socketCounts: ReadonlyMap<number, number>,
 ): { chains: GemUpgradeChain[]; leftover: InventoryGem[] } {
   const socketableStarRatings = new Set(socketCounts.keys());
-  const leftover: InventoryGem[] = inventory.filter((gem) => !socketableStarRatings.has(gem.starRating));
+  // Locked gems never take part in an upgrade chain, so they go straight to leftover.
+  const leftover: InventoryGem[] = inventory.filter((gem) => gem.locked || !socketableStarRatings.has(gem.starRating));
 
   // Keyed by gemTypeKey(gemId, starRating); insertion order = first-seen
   // order scanning inventory. This order determines the final `chains`
@@ -166,7 +167,7 @@ export function buildUpgradeChains(
   const groups = new Map<string, InventoryGem[]>();
   const groupIdentity = new Map<string, { gemId: number; starRating: number }>();
   for (const gem of inventory) {
-    if (!socketableStarRatings.has(gem.starRating)) continue;
+    if (gem.locked || !socketableStarRatings.has(gem.starRating)) continue;
     const key = gemTypeKey(gem.gemId, gem.starRating);
     const list = groups.get(key);
     if (list) list.push(gem);
@@ -257,6 +258,7 @@ export function buildUpgradeChains(
         activeStars: oldGem.activeStars,
         contribution: newContribution,
         dormant: oldGem.dormant,
+        locked: oldGem.locked,
       });
       const sacrificedGems = sacrificeIndices.map((index) => workingSub[index]);
       // Remove highest indices first so earlier indices stay valid.

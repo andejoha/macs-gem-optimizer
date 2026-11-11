@@ -45,6 +45,7 @@ export default function InventoryGemDialog({ open, currentStack, gems, gemPower,
   const [subRank, setSubRank] = useState<number>(initialProg);
   const [quantityStr, setQuantityStr] = useState<string>(String(currentStack?.quantity ?? 1));
   const [dormant, setDormant] = useState<boolean>(currentStack?.dormant ?? false);
+  const [locked, setLocked] = useState<boolean>(currentStack?.locked ?? false);
 
   const effectiveMainRank = mainRank || 1;
 
@@ -106,6 +107,7 @@ export default function InventoryGemDialog({ open, currentStack, gems, gemPower,
       active_stars: activeStars,
       quantity,
       dormant,
+      locked: locked && !canBeDormant(effectiveRank),
     });
   }
 
@@ -151,19 +153,34 @@ export default function InventoryGemDialog({ open, currentStack, gems, gemPower,
                   </Typography>
                   <StarRatingSelector starRating={selectedGem.star_rating} activeStars={activeStars} onChange={setActiveStars} />
                 </Box>
-                {canBeDormant(effectiveRank) && (
-                  <Tooltip title={`Dormant: ${dormant ? 'on' : 'off'}`}>
-                    <ButtonBase
-                      onClick={() => setDormant((d) => !d)}
-                      sx={{ borderRadius: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}
-                    >
-                      <Typography variant="body1" color="text.secondary" sx={{ userSelect: 'none' }}>
-                        Dormant
-                      </Typography>
-                      <Box component="img" src={dormant ? checkedIcon : uncheckedIcon} sx={{ width: 28, height: 28 }} />
-                    </ButtonBase>
-                  </Tooltip>
-                )}
+                <Stack spacing={0.5} sx={{ alignItems: 'flex-end' }}>
+                  {canBeDormant(effectiveRank) && (
+                    <Tooltip title={`Dormant: ${dormant ? 'on' : 'off'}`}>
+                      <ButtonBase
+                        onClick={() => setDormant((d) => !d)}
+                        sx={{ borderRadius: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}
+                      >
+                        <Typography variant="body1" color="text.secondary" sx={{ userSelect: 'none' }}>
+                          Dormant
+                        </Typography>
+                        <Box component="img" src={dormant ? checkedIcon : uncheckedIcon} sx={{ width: 28, height: 28 }} />
+                      </ButtonBase>
+                    </Tooltip>
+                  )}
+                  {!canBeDormant(effectiveRank) && (
+                    <Tooltip title="Locked gems are never upgraded, sacrificed for an upgrade, or converted to gem power">
+                      <ButtonBase
+                        onClick={() => setLocked((l) => !l)}
+                        sx={{ borderRadius: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}
+                      >
+                        <Typography variant="body1" color="text.secondary" sx={{ userSelect: 'none' }}>
+                          Locked
+                        </Typography>
+                        <Box component="img" src={locked ? checkedIcon : uncheckedIcon} sx={{ width: 28, height: 28 }} />
+                      </ButtonBase>
+                    </Tooltip>
+                  )}
+                </Stack>
               </Stack>
               {gpInsufficient && (
                 <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>

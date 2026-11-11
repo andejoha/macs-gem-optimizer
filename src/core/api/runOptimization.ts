@@ -322,8 +322,9 @@ export function runOptimization(
   let inventory = parsedInventory;
   let rankOneGems: InventoryGem[] = [];
   if (convert1Star) {
-    rankOneGems = inventory.filter((gem) => gem.starRating === 1 && gem.rank === '1');
-    inventory = inventory.filter((gem) => !(gem.starRating === 1 && gem.rank === '1'));
+    const isConvertible = (gem: InventoryGem) => gem.starRating === 1 && gem.rank === '1' && !gem.locked;
+    rankOneGems = inventory.filter(isConvertible);
+    inventory = inventory.filter((gem) => !isConvertible(gem));
     availablePower = availablePower + rankOneGems.length;
   }
 

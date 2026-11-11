@@ -13,3 +13,4 @@ function getInventoryImageUrl(filename: string): string {
 
 export const inventoryEmptyBg = getInventoryImageUrl('background-empty.png');
 export const inventoryFilledBg = getInventoryImageUrl('background-filled.png');
+export const inventoryLockedIcon = getInventoryImageUrl('locked.png');

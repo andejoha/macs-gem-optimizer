@@ -113,6 +113,13 @@ describe('computeSocketableStarRatings', () => {
 });
 
 describe('buildUpgradeChains -- step counts and spare-copy logic', () => {
+  it('locked copies are neither upgraded nor sacrificed', () => {
+    const locked = makeInventoryGem({ ...inv(2033, 2, '1'), locked: true });
+    const { chains, leftover } = buildUpgradeChains([inv(2033, 2, '1'), locked], new Map([[2, 99]]));
+    expect(chains[0].steps.length).toBe(0);
+    expect(leftover).toEqual([locked]);
+  });
+
   it('a gem type with exactly 1 copy has no spare copies -> 0 steps', () => {
     const inventory = [inv(2033, 2, '1')];
     const { chains, leftover } = buildUpgradeChains(inventory, new Map([[2, 99]]));
