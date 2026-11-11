@@ -189,7 +189,10 @@ Bonus activation is also an optional, player-chosen strategy — a third setting
   after the swap, not before). Whether its spare copies are also recovered follows the same §4 rule:
   only if the displaced gem ends up fully dormant, not if the swap moved it into a different main gem's
   socket. Spare copies recovered that way are available to the pass again: it repeats until a full
-  pass activates no further bonus. Either way, the "Suggested Upgrades" comparison reflects the plan's final state, including
+  pass activates no further bonus. After the pass, an applied upgrade is also dropped when an
+  unsocketed copy of the same star rating, at least as strong, can take the upgraded gem's socket
+  without lowering the surplus or the activated bonuses — typically a gem the pass just made dormant at
+  the very rank the upgrade reaches, which would make the upgrade a pure waste. Either way, the "Suggested Upgrades" comparison reflects the plan's final state, including
   any budget swaps, not the upgrade search's result in isolation.
 - **`forced`** — instead of a post-pass, this changes _selection_ inside the optimizer itself: at
   every pick the optimizer makes (both the closest-fit and empty-socket fill passes), it restricts
